@@ -30,7 +30,7 @@ from System.Text import UTF8Encoding
 # 버전
 # ============================================================
 
-VERSION = "v2.0 - Portfolio Ready Report"
+VERSION = "v2.1 - Compact Portfolio Report"
 
 
 # ============================================================
@@ -303,7 +303,12 @@ def get_issue_group_fields(issue_row):
     return qc_item, issue_message
 
 
-def build_issue_group_rows(issue_rows, shorten_samples=False):
+def build_issue_group_rows(
+    issue_rows,
+    shorten_samples=False,
+    sample_max_length=35,
+    sample_limit=5
+):
     """Category, Item Type, QC Item, Issue Message 기준으로 그룹화한다."""
     grouped_issues = {}
 
@@ -339,11 +344,14 @@ def build_issue_group_rows(issue_rows, shorten_samples=False):
         sample_item = item_name
 
         if shorten_samples:
-            sample_item = truncate_display_text(item_name, 35)
+            sample_item = truncate_display_text(
+                item_name,
+                sample_max_length
+            )
 
         if (
             sample_item not in group_data["sample_items"]
-            and len(group_data["sample_items"]) < 5
+            and len(group_data["sample_items"]) < sample_limit
         ):
             group_data["sample_items"].append(sample_item)
 
@@ -386,7 +394,7 @@ def contains_temporary_keyword(value):
 
 
 def build_key_issue_rows(issue_rows):
-    """Portfolio Output에 표시할 대표 Review Item을 최대 10개 선정한다."""
+    """Compact Output에 표시할 대표 Review Item을 최대 8개 선정한다."""
     candidates = []
     parameter_group_keys = set()
 
@@ -444,7 +452,7 @@ def build_key_issue_rows(issue_rows):
 
     key_issue_rows = []
 
-    for candidate in candidates[:10]:
+    for candidate in candidates[:8]:
         row = candidate[2]
         qc_item, issue_message = get_issue_group_fields(row)
         key_issue_rows.append(
@@ -727,7 +735,7 @@ def write_csv_metadata(writer, summary_data, qc_status):
 def save_full_csv(issue_rows, summary_data, qc_status, timestamp):
     """모든 상세 Issue를 UTF-8 BOM Full CSV로 저장한다."""
     save_folder = get_save_folder()
-    file_name = u"Revit_QC_v2.0_Full_{0}.csv".format(timestamp)
+    file_name = u"Revit_QC_v2.1_Full_{0}.csv".format(timestamp)
     csv_path = Path.Combine(save_folder, file_name)
 
     writer = None
@@ -775,7 +783,7 @@ def save_full_csv(issue_rows, summary_data, qc_status, timestamp):
 def save_summary_csv(group_rows, summary_data, qc_status, timestamp):
     """그룹화된 Issue만 UTF-8 BOM Summary CSV로 저장한다."""
     save_folder = get_save_folder()
-    file_name = u"Revit_QC_v2.0_Summary_{0}.csv".format(timestamp)
+    file_name = u"Revit_QC_v2.1_Summary_{0}.csv".format(timestamp)
     csv_path = Path.Combine(save_folder, file_name)
     writer = None
 
@@ -1148,7 +1156,9 @@ total_issue_count = len(issue_rows)
 issue_group_rows = build_issue_group_rows(issue_rows)
 display_issue_group_rows = build_issue_group_rows(
     issue_rows,
-    shorten_samples=True
+    shorten_samples=True,
+    sample_max_length=25,
+    sample_limit=3
 )
 key_issue_rows = build_key_issue_rows(issue_rows)
 
@@ -1184,68 +1194,43 @@ else:
 
 
 # ============================================================
-# Filtered Portfolio Report 출력
+# Compact Portfolio Report 출력
 # ============================================================
 
-summary_rows = [
+compact_summary_rows = [
     [u"Checked Sheets", len(sheets)],
     [u"Checked Views", len(checked_views)],
     [u"Checked Parameter Elements", checked_parameter_elements],
     [u"Total Review Items", total_issue_count],
     [u"Issue Groups", len(issue_group_rows)],
-    [u"High / Medium / Low", u"{0} / {1} / {2}".format(
-        high_count,
-        medium_count,
-        low_count
-    )]
+    [u"QC Status", qc_status],
+    [u"Export", u"Full CSV / Summary CSV"]
 ]
 
 output.print_html(
     u"""
     <div style="font-family:Segoe UI, Arial, sans-serif;">
         <h2>Revit QC Report Automation</h2>
-        <h3 style="margin-bottom:4px;">Version</h3>
-        <div>{0}</div>
-        <h3 style="margin-bottom:4px;">QC Status</h3>
-        <div style="color:{1}; font-size:16px; font-weight:bold;">{2}</div>
+        <div style="color:#616161; margin-bottom:10px;">{0}</div>
     </div>
     """.format(
-        html_escape(VERSION),
-        status_color,
-        html_escape(qc_status)
+        html_escape(VERSION)
     )
 )
 
 output.print_html_table(
-    table_data=summary_rows,
-    title="QC Summary",
+    table_data=compact_summary_rows,
+    title="Compact Summary",
     columns=[
-        "Summary Item",
-        "Count"
+        "Summary",
+        "Value"
     ],
     column_widths=[
         "260px",
-        "120px"
+        "220px"
     ],
-    table_width_style="width:420px",
+    table_width_style="width:500px",
     row_striping=True
-)
-
-output.print_html(
-    u"""
-    <div style="
-        margin:14px 0 8px 0;
-        padding:10px 14px;
-        border-left:5px solid #ef6c00;
-        background-color:#fff8e1;">
-        <span style="color:#616161; font-weight:bold;">Issue Groups</span>
-        <span style="
-            margin-left:10px;
-            color:#e65100;
-            font-size:20px;
-            font-weight:bold;">{0}</span>
-    </div>
-    """.format(len(issue_group_rows))
 )
 
 

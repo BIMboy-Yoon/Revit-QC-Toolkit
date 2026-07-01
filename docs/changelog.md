@@ -1,5 +1,16 @@
 # Changelog
 
+## v2.1 - Compact Portfolio Report
+
+- pyRevit Output 상단에 7개 핵심 항목으로 구성된 Compact Summary 적용
+- Checked Sheets, Checked Views, Checked Parameter Elements 표시
+- Total Review Items, Issue Groups, QC Status 및 CSV Export 구성 표시
+- Review Group Summary의 Sample Items를 최대 3개로 제한
+- 화면 Sample Item을 항목당 최대 25자로 축약
+- Review Item Samples를 최대 8개로 제한
+- Full CSV 및 Summary CSV에는 축약하지 않은 전체 값 유지
+- 기존 Sheet QC, View QC, Parameter QC 및 읽기 전용 검사 방식 유지
+
 ## v2.0 - Portfolio Ready Report
 
 - QC Summary를 Checked Sheets, Checked Views, Checked Parameter Elements,
