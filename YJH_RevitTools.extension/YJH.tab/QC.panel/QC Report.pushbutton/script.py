@@ -30,7 +30,7 @@ from System.Text import UTF8Encoding
 # 버전
 # ============================================================
 
-VERSION = "v1.9 - Filtered Portfolio Report"
+VERSION = "v2.0 - Portfolio Ready Report"
 
 
 # ============================================================
@@ -234,6 +234,19 @@ def get_severity_rank(severity):
     return severity_ranks.get(to_text(severity), 0)
 
 
+def truncate_display_text(value, max_length):
+    """화면 표시용 문자열을 지정 길이 안에서 생략 처리한다."""
+    text = to_text(value)
+
+    if len(text) <= max_length:
+        return text
+
+    if max_length <= 3:
+        return text[:max_length]
+
+    return u"{0}...".format(text[:max_length - 3])
+
+
 def get_issue_group_fields(issue_row):
     """상세 Issue를 그룹용 QC Item과 Issue Message로 정규화한다."""
     category = issue_row[0]
@@ -290,7 +303,7 @@ def get_issue_group_fields(issue_row):
     return qc_item, issue_message
 
 
-def build_issue_group_rows(issue_rows):
+def build_issue_group_rows(issue_rows, shorten_samples=False):
     """Category, Item Type, QC Item, Issue Message 기준으로 그룹화한다."""
     grouped_issues = {}
 
@@ -323,11 +336,16 @@ def build_issue_group_rows(issue_rows):
         ):
             group_data["severity"] = severity
 
+        sample_item = item_name
+
+        if shorten_samples:
+            sample_item = truncate_display_text(item_name, 35)
+
         if (
-            item_name not in group_data["sample_items"]
+            sample_item not in group_data["sample_items"]
             and len(group_data["sample_items"]) < 5
         ):
-            group_data["sample_items"].append(item_name)
+            group_data["sample_items"].append(sample_item)
 
     group_rows = []
 
@@ -368,20 +386,16 @@ def contains_temporary_keyword(value):
 
 
 def build_key_issue_rows(issue_rows):
-    """Portfolio Output에 표시할 핵심 상세 Issue를 최대 12개 선정한다."""
-    sheet_issue_count = 0
-
-    for row in issue_rows:
-        if row[0] == u"Sheet QC":
-            sheet_issue_count += 1
-
+    """Portfolio Output에 표시할 대표 Review Item을 최대 10개 선정한다."""
     candidates = []
+    parameter_group_keys = set()
 
     for index, row in enumerate(issue_rows):
         category = row[0]
         item_name = row[2]
         severity = row[3]
         issue_detail = row[4]
+        qc_item, issue_message = get_issue_group_fields(row)
 
         # 미배치 View는 Issue Group Summary의 Count + Sample Items로만 표시한다.
         if (
@@ -393,16 +407,33 @@ def build_key_issue_rows(issue_rows):
         if (
             category == u"View QC"
             and contains_temporary_keyword(item_name)
+            and issue_detail.startswith(u"임시 키워드 포함:")
         ):
             priority = 0
-        elif category == u"Sheet QC" and sheet_issue_count <= 10:
+        elif (
+            category == u"Sheet QC"
+            and issue_detail == u"배치된 View 없음"
+        ):
             priority = 1
-        elif severity == u"High":
+        elif category == u"Parameter QC":
+            parameter_group_key = (
+                category,
+                row[1],
+                qc_item,
+                issue_message
+            )
+
+            if parameter_group_key in parameter_group_keys:
+                continue
+
+            parameter_group_keys.add(parameter_group_key)
             priority = 2
-        elif severity == u"Medium":
+        elif severity == u"High":
             priority = 3
-        else:
+        elif severity == u"Medium":
             priority = 4
+        else:
+            priority = 5
 
         candidates.append((priority, index, row))
 
@@ -413,14 +444,14 @@ def build_key_issue_rows(issue_rows):
 
     key_issue_rows = []
 
-    for candidate in candidates[:12]:
+    for candidate in candidates[:10]:
         row = candidate[2]
         qc_item, issue_message = get_issue_group_fields(row)
         key_issue_rows.append(
             [
                 row[0],
                 row[1],
-                row[2],
+                truncate_display_text(row[2], 35),
                 row[3],
                 qc_item,
                 issue_message
@@ -696,7 +727,7 @@ def write_csv_metadata(writer, summary_data, qc_status):
 def save_full_csv(issue_rows, summary_data, qc_status, timestamp):
     """모든 상세 Issue를 UTF-8 BOM Full CSV로 저장한다."""
     save_folder = get_save_folder()
-    file_name = u"Revit_QC_v1.9_Full_{0}.csv".format(timestamp)
+    file_name = u"Revit_QC_v2.0_Full_{0}.csv".format(timestamp)
     csv_path = Path.Combine(save_folder, file_name)
 
     writer = None
@@ -744,7 +775,7 @@ def save_full_csv(issue_rows, summary_data, qc_status, timestamp):
 def save_summary_csv(group_rows, summary_data, qc_status, timestamp):
     """그룹화된 Issue만 UTF-8 BOM Summary CSV로 저장한다."""
     save_folder = get_save_folder()
-    file_name = u"Revit_QC_v1.9_Summary_{0}.csv".format(timestamp)
+    file_name = u"Revit_QC_v2.0_Summary_{0}.csv".format(timestamp)
     csv_path = Path.Combine(save_folder, file_name)
     writer = None
 
@@ -1115,6 +1146,10 @@ for row in issue_rows:
 
 total_issue_count = len(issue_rows)
 issue_group_rows = build_issue_group_rows(issue_rows)
+display_issue_group_rows = build_issue_group_rows(
+    issue_rows,
+    shorten_samples=True
+)
 key_issue_rows = build_key_issue_rows(issue_rows)
 
 
@@ -1156,10 +1191,8 @@ summary_rows = [
     [u"Checked Sheets", len(sheets)],
     [u"Checked Views", len(checked_views)],
     [u"Checked Parameter Elements", checked_parameter_elements],
-    [u"Sheet Issues", sheet_issue_count],
-    [u"View Issues", view_issue_count],
-    [u"Parameter Issues", parameter_issue_count],
-    [u"Total Issues", total_issue_count],
+    [u"Total Review Items", total_issue_count],
+    [u"Issue Groups", len(issue_group_rows)],
     [u"High / Medium / Low", u"{0} / {1} / {2}".format(
         high_count,
         medium_count,
@@ -1198,15 +1231,32 @@ output.print_html_table(
     row_striping=True
 )
 
+output.print_html(
+    u"""
+    <div style="
+        margin:14px 0 8px 0;
+        padding:10px 14px;
+        border-left:5px solid #ef6c00;
+        background-color:#fff8e1;">
+        <span style="color:#616161; font-weight:bold;">Issue Groups</span>
+        <span style="
+            margin-left:10px;
+            color:#e65100;
+            font-size:20px;
+            font-weight:bold;">{0}</span>
+    </div>
+    """.format(len(issue_group_rows))
+)
+
 
 # ============================================================
-# Issue Group Summary
+# Review Group Summary
 # ============================================================
 
-if issue_group_rows:
+if display_issue_group_rows:
     output.print_html_table(
-        table_data=issue_group_rows,
-        title="Issue Group Summary",
+        table_data=display_issue_group_rows,
+        title="Review Group Summary",
         columns=[
             "Category",
             "Item Type",
@@ -1237,7 +1287,7 @@ else:
             background-color:#e8f5e9;
             color:#2e7d32;
             font-weight:bold;">
-            <strong>Issue Group Summary</strong><br>
+            <strong>Review Group Summary</strong><br>
             QC 항목이 발견되지 않았습니다.
         </div>
         """
@@ -1245,13 +1295,13 @@ else:
 
 
 # ============================================================
-# Key Issue Samples
+# Review Item Samples
 # ============================================================
 
 if key_issue_rows:
     output.print_html_table(
         table_data=key_issue_rows,
-        title="Key Issue Samples",
+        title="Review Item Samples",
         columns=[
             "Category",
             "Item Type",
@@ -1275,7 +1325,7 @@ else:
     output.print_html(
         u"""
         <div style="margin-top:12px; color:#616161;">
-            <strong>Key Issue Samples</strong><br>
+            <strong>Review Item Samples</strong><br>
             표시할 핵심 Issue가 없습니다.
         </div>
         """

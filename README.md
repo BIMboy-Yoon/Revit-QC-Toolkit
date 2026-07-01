@@ -12,6 +12,12 @@ Codex-assisted pyRevit tool for Revit 2026 drawing QC.
 - Read-only model checking
 - Git-based version control
 
+## v2.0 - Portfolio Ready Report
+
+포트폴리오 캡처용 pyRevit Output은 Total Review Items와 Issue Groups를 중심으로
+간결하게 표시합니다. 화면의 Sample Items와 긴 요소 이름만 축약하며,
+Full CSV와 Summary CSV에는 전체 데이터를 유지합니다.
+
 ## v1.9 - Filtered Portfolio Report
 
 pyRevit Output은 반복 Issue를 그룹화하여 핵심 요약과 대표 Sample만 표시합니다.

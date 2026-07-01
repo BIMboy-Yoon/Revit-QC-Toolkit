@@ -1,5 +1,17 @@
 # Changelog
 
+## v2.0 - Portfolio Ready Report
+
+- QC Summary를 Checked Sheets, Checked Views, Checked Parameter Elements,
+  Total Review Items, Issue Groups, High / Medium / Low 중심으로 간소화
+- Issue Groups 수치를 별도 강조 영역으로 표시
+- Issue Group Summary를 Review Group Summary로 변경
+- Key Issue Samples를 Review Item Samples로 변경하고 최대 10개로 제한
+- 임시 키워드 View, 배치 View가 없는 Sheet, Parameter 대표 누락 그룹 순으로 우선 표시
+- 화면 Sample Item과 긴 요소 이름을 항목당 최대 35자로 축약
+- Full CSV 및 Summary CSV에는 축약하지 않은 전체 데이터 유지
+- 기존 Sheet QC, View QC, Parameter QC 및 읽기 전용 검사 방식 유지
+
 ## v1.9 - Filtered Portfolio Report
 
 - pyRevit Output을 QC Summary, Issue Group Summary, Key Issue Samples 구조로 정리
