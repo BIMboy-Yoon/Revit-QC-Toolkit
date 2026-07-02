@@ -14,7 +14,7 @@ def get_latest_report_pointer(reports_dir):
 
 
 def write_latest_report_path(reports_dir, report_path):
-    """마지막 Summary CSV 또는 HTML Report 경로를 UTF-8로 저장한다."""
+    """우선순위가 가장 높은 마지막 결과 파일 경로를 UTF-8로 저장한다."""
     if not report_path:
         return u""
 
@@ -27,6 +27,15 @@ def write_latest_report_path(reports_dir, report_path):
         pointer_file.write(report_path)
 
     return pointer_path
+
+
+def select_latest_report_path(styled_xlsx_path, summary_csv_path, full_csv_path):
+    """Styled XLSX, Summary CSV, Full CSV 순서로 생성된 결과를 선택한다."""
+    for report_path in [styled_xlsx_path, summary_csv_path, full_csv_path]:
+        if report_path:
+            return report_path
+
+    return u""
 
 
 def read_latest_report_path(reports_dir):

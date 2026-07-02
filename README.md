@@ -12,6 +12,15 @@ Codex-assisted pyRevit tool for Revit 2026 drawing QC.
 - Read-only model checking
 - Git-based version control
 
+## v2.4 - Export Options
+
+Run Full QC와 Quick QC 실행 시 저장 폴더와 출력 형식을 먼저 선택합니다.
+Full CSV, Summary CSV, Styled XLSX Report를 체크박스로 선택할 수 있으며,
+Quick QC 기본값은 Full CSV OFF, Summary CSV ON, Styled XLSX ON입니다.
+선택한 폴더는 다음 실행을 위해 runtime 기록으로만 보관하고 Git에서는 제외합니다.
+Styled XLSX는 이번 버전에서 호출 구조와 warning placeholder만 제공하며,
+CSV Export와 read-only QC 검사 기능은 그대로 유지합니다.
+
 ## v2.3.1 - Toolkit Icons and Tooltips
 
 5개 Toolkit 버튼에 기능별 미니멀 아이콘과 간결한 tooltip을 적용했습니다.

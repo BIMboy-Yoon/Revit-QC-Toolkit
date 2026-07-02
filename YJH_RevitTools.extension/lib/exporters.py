@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 
-from System import Environment
 from System.IO import Directory, Path, StreamWriter
 from System.Text import UTF8Encoding
 
-from collectors import is_empty, to_text
+from collectors import to_text
 from grouping import get_issue_group_fields
 
 
@@ -18,45 +17,21 @@ def csv_escape(value):
     return text
 
 
-def ensure_folder(folder_path):
-    if is_empty(folder_path):
-        return False
-
-    if not Directory.Exists(folder_path):
-        Directory.CreateDirectory(folder_path)
-
-    return Directory.Exists(folder_path)
-
-
-def get_save_folder():
-    desktop_error = u""
-    documents_error = u""
-
-    try:
-        desktop_path = Environment.GetFolderPath(
-            Environment.SpecialFolder.DesktopDirectory
+def get_export_path(export_folder, file_prefix, report_name, timestamp, extension):
+    if not export_folder or not Directory.Exists(export_folder):
+        raise Exception(
+            u"선택한 Export 폴더를 사용할 수 없습니다: {0}".format(
+                export_folder
+            )
         )
 
-        if ensure_folder(desktop_path):
-            return desktop_path
-    except Exception as ex:
-        desktop_error = to_text(ex)
-
-    try:
-        documents_path = Environment.GetFolderPath(
-            Environment.SpecialFolder.MyDocuments
-        )
-
-        if ensure_folder(documents_path):
-            return documents_path
-    except Exception as ex:
-        documents_error = to_text(ex)
-
-    raise Exception(
-        u"Desktop 및 Documents 폴더를 사용할 수 없습니다. "
-        u"Desktop 오류: {0} / Documents 오류: {1}".format(
-            desktop_error,
-            documents_error
+    return Path.Combine(
+        export_folder,
+        u"{0}_{1}_{2}.{3}".format(
+            file_prefix,
+            report_name,
+            timestamp,
+            extension
         )
     )
 
@@ -86,11 +61,15 @@ def save_full_csv(
     qc_status,
     timestamp,
     version,
-    file_prefix
+    file_prefix,
+    export_folder
 ):
-    csv_path = Path.Combine(
-        get_save_folder(),
-        u"{0}_Full_{1}.csv".format(file_prefix, timestamp)
+    csv_path = get_export_path(
+        export_folder,
+        file_prefix,
+        u"Full",
+        timestamp,
+        u"csv"
     )
     writer = None
 
@@ -129,11 +108,15 @@ def save_summary_csv(
     qc_status,
     timestamp,
     version,
-    file_prefix
+    file_prefix,
+    export_folder
 ):
-    csv_path = Path.Combine(
-        get_save_folder(),
-        u"{0}_Summary_{1}.csv".format(file_prefix, timestamp)
+    csv_path = get_export_path(
+        export_folder,
+        file_prefix,
+        u"Summary",
+        timestamp,
+        u"csv"
     )
     writer = None
 
@@ -152,3 +135,29 @@ def save_summary_csv(
             writer.Close()
 
     return csv_path
+
+
+def export_styled_xlsx(
+    issue_rows,
+    group_rows,
+    summary_data,
+    qc_status,
+    timestamp,
+    version,
+    file_prefix,
+    export_folder
+):
+    """v2.4 호출 구조용 placeholder. QC 실행을 중단시키지 않는다."""
+    intended_path = get_export_path(
+        export_folder,
+        file_prefix,
+        u"Report",
+        timestamp,
+        u"xlsx"
+    )
+    return (
+        u"",
+        u"Styled XLSX export is not implemented yet. Target: {0}".format(
+            intended_path
+        )
+    )

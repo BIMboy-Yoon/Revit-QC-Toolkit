@@ -1,5 +1,22 @@
 # Workflow
 
+## v2.4 Export Options
+
+1. Run Full QC 또는 Quick QC 실행
+2. 마지막 저장 폴더 안내 확인
+3. Export 폴더 선택 및 쓰기 권한 검증
+4. Full CSV / Summary CSV / Styled XLSX Report 선택
+5. Revit Model Read-only QC 실행
+6. 선택 형식만 timestamp 파일명으로 Export
+7. pyRevit Output에 생성 경로 및 warning 표시
+8. 마지막 저장 폴더와 우선순위 결과 경로를 runtime 파일로 기록
+
+Quick QC 기본 선택은 Summary CSV와 Styled XLSX Report이며 Full CSV는 해제 상태입니다.
+Styled XLSX는 v2.4에서 선택 및 호출 구조만 연결하고, 실제 디자인 Export는 후속 단계로
+분리합니다. 결과 경로 우선순위는 Styled XLSX, Summary CSV, Full CSV 순서입니다.
+`latest_export_folder.txt`와 `latest_report_path.txt`는 로컬 경로를 포함할 수 있어
+Git에서 제외합니다.
+
 ## v2.3 Toolkit Buttons
 
 | Button | Role | Export |

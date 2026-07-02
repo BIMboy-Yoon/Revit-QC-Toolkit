@@ -25,7 +25,10 @@ def render_report(
     saved_full_csv_path,
     full_csv_error,
     saved_summary_csv_path,
-    summary_csv_error
+    summary_csv_error,
+    saved_styled_xlsx_path,
+    styled_xlsx_error,
+    export_options
 ):
     compact_summary_rows = [
         [u"Checked Sheets", summary_data["checked_sheets"]],
@@ -34,7 +37,7 @@ def render_report(
         [u"Total Review Items", summary_data["total_issues"]],
         [u"Issue Groups", issue_group_count],
         [u"QC Status", qc_status],
-        [u"Export", u"Full CSV / Summary CSV"]
+        [u"Export", u" / ".join(export_options["selected_formats"])]
     ]
 
     output.print_html(
@@ -108,24 +111,15 @@ def render_report(
             """
         )
 
-    full_csv_result = _get_export_result(saved_full_csv_path, full_csv_error)
-    summary_csv_result = _get_export_result(
+    render_export_results(
+        output,
+        export_options,
+        saved_full_csv_path,
+        full_csv_error,
         saved_summary_csv_path,
-        summary_csv_error
-    )
-
-    output.print_html(
-        u"""
-        <div style="margin-top:12px; padding:10px; border-left:4px solid #ef6c00;
-            background-color:#fff8e1;">
-            <strong>CSV Export Path</strong><br>
-            <strong>Full CSV:</strong> {0}<br>
-            <strong>Summary CSV:</strong> {1}<br>
-            <span style="color:#616161;">
-                CSV 저장 실패가 발생해도 QC 검사는 완료됩니다.
-            </span>
-        </div>
-        """.format(full_csv_result, summary_csv_result)
+        summary_csv_error,
+        saved_styled_xlsx_path,
+        styled_xlsx_error
     )
 
 
@@ -135,8 +129,13 @@ def render_quick_report(
     summary_data,
     qc_status,
     issue_group_count,
+    saved_full_csv_path,
+    full_csv_error,
     saved_summary_csv_path,
-    summary_csv_error
+    summary_csv_error,
+    saved_styled_xlsx_path,
+    styled_xlsx_error,
+    export_options
 ):
     """Sheet + View Quick QC용 간결한 Summary를 출력한다."""
     compact_summary_rows = [
@@ -145,7 +144,7 @@ def render_quick_report(
         [u"Total Review Items", summary_data["total_issues"]],
         [u"Issue Groups", issue_group_count],
         [u"QC Status", qc_status],
-        [u"Export", u"Summary CSV"]
+        [u"Export", u" / ".join(export_options["selected_formats"])]
     ]
 
     output.print_html(
@@ -169,26 +168,80 @@ def render_quick_report(
         row_striping=True
     )
 
+    render_export_results(
+        output,
+        export_options,
+        saved_full_csv_path,
+        full_csv_error,
+        saved_summary_csv_path,
+        summary_csv_error,
+        saved_styled_xlsx_path,
+        styled_xlsx_error
+    )
+
+
+def render_export_results(
+    output,
+    export_options,
+    saved_full_csv_path,
+    full_csv_error,
+    saved_summary_csv_path,
+    summary_csv_error,
+    saved_styled_xlsx_path,
+    styled_xlsx_error
+):
+    full_csv_result = _get_export_result(
+        saved_full_csv_path,
+        full_csv_error,
+        export_options["full_csv"]
+    )
     summary_csv_result = _get_export_result(
         saved_summary_csv_path,
-        summary_csv_error
+        summary_csv_error,
+        export_options["summary_csv"]
+    )
+    styled_xlsx_result = _get_export_result(
+        saved_styled_xlsx_path,
+        styled_xlsx_error,
+        export_options["styled_xlsx"]
     )
 
     output.print_html(
         u"""
         <div style="margin-top:12px; padding:10px; border-left:4px solid #ef6c00;
             background-color:#fff8e1;">
-            <strong>Summary CSV:</strong> {0}<br>
+            <strong>Export Results</strong><br>
+            <strong>Folder:</strong> {0}<br>
+            <strong>Selected:</strong> {1}<br>
+            <strong>Full CSV:</strong> {2}<br>
+            <strong>Summary CSV:</strong> {3}<br>
+            <strong>Styled XLSX Report:</strong> {4}<br>
             <span style="color:#616161;">
-                Quick QC는 Parameter QC와 Full CSV를 생성하지 않습니다.
+                Export 실패가 발생해도 QC 검사는 완료됩니다.
             </span>
         </div>
-        """.format(summary_csv_result)
+        """.format(
+            html_escape(export_options["folder"]),
+            html_escape(u" / ".join(export_options["selected_formats"])),
+            full_csv_result,
+            summary_csv_result,
+            styled_xlsx_result
+        )
     )
 
+    if export_options.get("folder_history_error"):
+        output.print_html(
+            u"<div style='color:#b71c1c;'>마지막 저장 폴더 기록 실패: {0}</div>".format(
+                html_escape(export_options["folder_history_error"])
+            )
+        )
 
-def _get_export_result(saved_path, error_message):
+
+def _get_export_result(saved_path, error_message, is_selected):
+    if not is_selected:
+        return u"선택하지 않음"
+
     if not is_empty(saved_path):
         return html_escape(saved_path)
 
-    return u"저장 실패: {0}".format(html_escape(error_message))
+    return u"Warning: {0}".format(html_escape(error_message))

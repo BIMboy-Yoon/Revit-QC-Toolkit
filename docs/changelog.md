@@ -1,5 +1,19 @@
 # Changelog
 
+## v2.4 - Export Options
+
+- Run Full QC와 Quick QC 시작 시 공통 Export Options 대화상자 표시
+- 체크박스로 Full CSV, Summary CSV, Styled XLSX Report 선택 가능
+- Quick QC 기본값을 Full CSV OFF, Summary CSV ON, Styled XLSX ON으로 설정
+- Windows 폴더 선택 UI와 실제 쓰기 가능 여부 검증 적용
+- 사용자가 Cancel하거나 출력 형식을 선택하지 않으면 QC 실행 중단
+- 선택 폴더에 timestamp 기반 Full/Summary CSV 저장
+- 마지막 저장 폴더를 `reports/latest_export_folder.txt`에 runtime 기록
+- 마지막 결과 경로를 XLSX, Summary CSV, Full CSV 우선순위로 기록
+- Styled XLSX 호출 구조와 non-blocking placeholder 추가
+- pyRevit Output에 저장 폴더, 선택 형식, 결과 경로와 warning 표시
+- 기존 Sheet, View, Parameter 검사 로직과 read-only 방식 유지
+
 ## v2.3.1 - Toolkit Icons and Tooltips
 
 - Run Full QC에 문서와 체크마크 아이콘 적용

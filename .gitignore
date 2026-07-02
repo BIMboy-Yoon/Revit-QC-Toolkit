@@ -17,6 +17,9 @@
 *.csv
 !sample_output/*.csv
 
+# Excel exports
+*.xlsx
+
 # Python cache
 __pycache__/
 *.pyc
@@ -40,3 +43,5 @@ screenshots/raw/
 # Runtime report history
 YJH_RevitTools.extension/reports/*
 !YJH_RevitTools.extension/reports/.gitkeep
+YJH_RevitTools.extension/reports/latest_report_path.txt
+YJH_RevitTools.extension/reports/latest_export_folder.txt

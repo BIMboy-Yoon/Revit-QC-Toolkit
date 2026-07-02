@@ -37,14 +37,15 @@ from collectors import (
     to_text
 )
 from config_loader import load_config
-from exporters import save_full_csv, save_summary_csv
+from export_options import request_export_options
+from exporters import export_styled_xlsx, save_full_csv, save_summary_csv
 from grouping import (
     build_issue_group_rows,
     build_key_issue_rows,
     build_summary_data,
     get_qc_status
 )
-from report_history import write_latest_report_path
+from report_history import select_latest_report_path, write_latest_report_path
 from report_ui import html_escape, render_report
 
 
@@ -54,6 +55,14 @@ VERSION = config["version"]
 doc = revit.doc
 output = script.get_output()
 output.set_title("Revit QC Report {0}".format(VERSION))
+
+selected_export_options = request_export_options(REPORTS_DIR, quick_mode=False)
+
+if selected_export_options is None:
+    output.print_html(
+        u"<h2>Revit QC Report</h2><p>Export cancelled by user</p>"
+    )
+    script.exit()
 
 sheet_config = config["sheet_qc"]
 view_config = config["view_qc"]
@@ -109,37 +118,64 @@ qc_status = get_qc_status(summary_data)
 csv_timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss")
 saved_full_csv_path = u""
 saved_summary_csv_path = u""
+saved_styled_xlsx_path = u""
 full_csv_error = u""
 summary_csv_error = u""
+styled_xlsx_error = u""
 history_error = u""
 
-try:
-    saved_full_csv_path = save_full_csv(
-        issue_rows,
-        summary_data,
-        qc_status,
-        csv_timestamp,
-        VERSION,
-        export_config["file_prefix"]
-    )
-except Exception as ex:
-    full_csv_error = to_text(ex)
-
-try:
-    saved_summary_csv_path = save_summary_csv(
-        issue_group_rows,
-        summary_data,
-        qc_status,
-        csv_timestamp,
-        VERSION,
-        export_config["file_prefix"]
-    )
-except Exception as ex:
-    summary_csv_error = to_text(ex)
-
-if saved_summary_csv_path:
+if selected_export_options["full_csv"]:
     try:
-        write_latest_report_path(REPORTS_DIR, saved_summary_csv_path)
+        saved_full_csv_path = save_full_csv(
+            issue_rows,
+            summary_data,
+            qc_status,
+            csv_timestamp,
+            VERSION,
+            export_config["file_prefix"],
+            selected_export_options["folder"]
+        )
+    except Exception as ex:
+        full_csv_error = to_text(ex)
+
+if selected_export_options["summary_csv"]:
+    try:
+        saved_summary_csv_path = save_summary_csv(
+            issue_group_rows,
+            summary_data,
+            qc_status,
+            csv_timestamp,
+            VERSION,
+            export_config["file_prefix"],
+            selected_export_options["folder"]
+        )
+    except Exception as ex:
+        summary_csv_error = to_text(ex)
+
+if selected_export_options["styled_xlsx"]:
+    try:
+        saved_styled_xlsx_path, styled_xlsx_error = export_styled_xlsx(
+            issue_rows,
+            issue_group_rows,
+            summary_data,
+            qc_status,
+            csv_timestamp,
+            VERSION,
+            export_config["file_prefix"],
+            selected_export_options["folder"]
+        )
+    except Exception as ex:
+        styled_xlsx_error = to_text(ex)
+
+latest_report_path = select_latest_report_path(
+    saved_styled_xlsx_path,
+    saved_summary_csv_path,
+    saved_full_csv_path
+)
+
+if latest_report_path:
+    try:
+        write_latest_report_path(REPORTS_DIR, latest_report_path)
     except Exception as ex:
         history_error = to_text(ex)
 
@@ -155,7 +191,10 @@ render_report(
     saved_full_csv_path,
     full_csv_error,
     saved_summary_csv_path,
-    summary_csv_error
+    summary_csv_error,
+    saved_styled_xlsx_path,
+    styled_xlsx_error,
+    selected_export_options
 )
 
 if history_error:
