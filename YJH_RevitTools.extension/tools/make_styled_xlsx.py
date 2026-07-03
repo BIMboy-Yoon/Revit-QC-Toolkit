@@ -7,6 +7,7 @@ import os
 import sys
 
 from openpyxl import Workbook
+from openpyxl.worksheet.page import PageMargins
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
@@ -19,6 +20,9 @@ ORANGE_POINT = "E97826"
 LIGHT_BORDER = "D9DEE3"
 LIGHT_FILL = "F6F7F8"
 ZEBRA_FILL = "F2F4F6"
+WARNING_FILL = "FFF1E6"
+MEDIUM_FILL = "FFF7D6"
+LOW_FILL = "F1F3F5"
 
 
 def load_payload(json_path):
@@ -64,6 +68,8 @@ def get_report_font_name():
 def build_styles():
     font_name = get_report_font_name()
     thin_side = Side(style="thin", color=LIGHT_BORDER)
+    soft_navy_side = Side(style="thin", color=SOFT_NAVY_LINE)
+    orange_side = Side(style="medium", color=ORANGE_POINT)
 
     return {
         "title_font": Font(
@@ -78,8 +84,28 @@ def build_styles():
             bold=True,
             color="FFFFFF"
         ),
-        "body_font": Font(name=font_name, size=9, color=TEXT_NAVY),
+        "summary_title_font": Font(
+            name=font_name,
+            size=18,
+            bold=True,
+            color="FFFFFF"
+        ),
+        "body_font": Font(name=font_name, size=10, color=TEXT_NAVY),
         "body_bold_font": Font(
+            name=font_name,
+            size=10,
+            bold=True,
+            color=TEXT_NAVY
+        ),
+        "table_body_font": Font(name=font_name, size=9.5, color=TEXT_NAVY),
+        "table_body_bold_font": Font(
+            name=font_name,
+            size=9.5,
+            bold=True,
+            color=TEXT_NAVY
+        ),
+        "detail_body_font": Font(name=font_name, size=9, color=TEXT_NAVY),
+        "detail_body_bold_font": Font(
             name=font_name,
             size=9,
             bold=True,
@@ -91,12 +117,24 @@ def build_styles():
             bold=True,
             color=TEXT_NAVY
         ),
-        "highlight_font": Font(
+        "metadata_value_font": Font(
             name=font_name,
-            size=12,
+            size=9,
+            color=TEXT_NAVY
+        ),
+        "kpi_value_font": Font(
+            name=font_name,
+            size=16,
             bold=True,
             color=TEXT_NAVY
         ),
+        "section_font": Font(
+            name=font_name,
+            size=10,
+            bold=True,
+            color=TEXT_NAVY
+        ),
+        "subtitle_font": Font(name=font_name, size=9, color="6C757D"),
         "title_fill": PatternFill(fill_type="solid", fgColor=TITLE_NAVY),
         "navy_fill": PatternFill(fill_type="solid", fgColor=HEADER_NAVY),
         "orange_fill": PatternFill(fill_type="solid", fgColor=ORANGE_POINT),
@@ -106,26 +144,48 @@ def build_styles():
             fgColor=LIGHT_FILL
         ),
         "white_fill": PatternFill(fill_type="solid", fgColor="FFFFFF"),
-        "highlight_fill": PatternFill(fill_type="solid", fgColor="FFF0E3"),
-        "high_fill": PatternFill(fill_type="solid", fgColor="FADBD8"),
-        "medium_fill": PatternFill(fill_type="solid", fgColor="FFF0C2"),
-        "low_fill": PatternFill(fill_type="solid", fgColor="E9ECEF"),
+        "warning_fill": PatternFill(fill_type="solid", fgColor=WARNING_FILL),
+        "high_fill": PatternFill(fill_type="solid", fgColor=WARNING_FILL),
+        "medium_fill": PatternFill(fill_type="solid", fgColor=MEDIUM_FILL),
+        "low_fill": PatternFill(fill_type="solid", fgColor=LOW_FILL),
         "thin_border": Border(
             left=thin_side,
             right=thin_side,
             top=thin_side,
             bottom=thin_side
         ),
+        "header_border": Border(
+            left=soft_navy_side,
+            right=soft_navy_side,
+            top=soft_navy_side,
+            bottom=soft_navy_side
+        ),
+        "title_border": Border(bottom=orange_side),
         "title_alignment": Alignment(
             horizontal="left",
-            vertical="center"
+            vertical="center",
+            indent=1
         ),
         "header_alignment": Alignment(
             horizontal="center",
             vertical="center",
             wrap_text=True
         ),
-        "body_alignment": Alignment(vertical="top", wrap_text=True)
+        "body_alignment": Alignment(
+            horizontal="left",
+            vertical="top",
+            wrap_text=True
+        ),
+        "center_alignment": Alignment(
+            horizontal="center",
+            vertical="center",
+            wrap_text=True
+        ),
+        "right_alignment": Alignment(
+            horizontal="right",
+            vertical="center",
+            wrap_text=True
+        )
     }
 
 
@@ -140,7 +200,7 @@ def apply_title(sheet, title, column_count, styles):
     title_cell.font = styles["title_font"]
     title_cell.fill = styles["title_fill"]
     title_cell.alignment = styles["title_alignment"]
-    sheet.row_dimensions[1].height = 32
+    sheet.row_dimensions[1].height = 34
 
     for column_index in range(1, column_count + 1):
         accent_cell = sheet.cell(row=2, column=column_index)
@@ -148,22 +208,24 @@ def apply_title(sheet, title, column_count, styles):
     sheet.row_dimensions[2].height = 4
 
 
-def auto_fit_columns(sheet, column_count, last_row):
-    for column_index in range(1, column_count + 1):
-        max_length = 0
-
-        for row_index in range(1, last_row + 1):
-            value = sheet.cell(row=row_index, column=column_index).value
-            if value is None:
-                continue
-            value_length = len(str(value))
-            if value_length > max_length:
-                max_length = value_length
-
-        adjusted_width = max(12, min(max_length + 3, 52))
-        sheet.column_dimensions[get_column_letter(column_index)].width = (
-            adjusted_width
-        )
+def apply_common_sheet_settings(sheet, print_title_rows, print_area):
+    sheet.sheet_view.showGridLines = False
+    sheet.sheet_view.zoomScale = 90
+    sheet.page_setup.orientation = sheet.ORIENTATION_LANDSCAPE
+    sheet.page_setup.paperSize = sheet.PAPERSIZE_A4
+    sheet.page_setup.fitToWidth = 1
+    sheet.page_setup.fitToHeight = 0
+    sheet.sheet_properties.pageSetUpPr.fitToPage = True
+    sheet.page_margins = PageMargins(
+        left=0.25,
+        right=0.25,
+        top=0.35,
+        bottom=0.35,
+        header=0.15,
+        footer=0.15
+    )
+    sheet.print_title_rows = print_title_rows
+    sheet.print_area = print_area
 
 
 def apply_table(
@@ -173,7 +235,11 @@ def apply_table(
     rows,
     styles,
     severity_column,
-    count_column=None
+    column_widths,
+    count_column=None,
+    numeric_columns=None,
+    center_columns=None,
+    detail_mode=False
 ):
     column_count = len(headers)
     apply_title(sheet, title, column_count, styles)
@@ -184,8 +250,18 @@ def apply_table(
         cell = sheet.cell(row=header_row, column=column_index, value=header)
         cell.font = styles["header_font"]
         cell.fill = styles["navy_fill"]
-        cell.border = styles["thin_border"]
+        cell.border = styles["header_border"]
         cell.alignment = styles["header_alignment"]
+    sheet.row_dimensions[header_row].height = 28
+
+    body_font = styles["detail_body_font"] if detail_mode else styles["table_body_font"]
+    bold_font = (
+        styles["detail_body_bold_font"]
+        if detail_mode
+        else styles["table_body_bold_font"]
+    )
+    numeric_columns = numeric_columns or []
+    center_columns = center_columns or []
 
     for row_offset, row_values in enumerate(rows):
         row_index = data_start_row + row_offset
@@ -193,18 +269,23 @@ def apply_table(
 
         for column_index, value in enumerate(row_values, 1):
             cell = sheet.cell(row=row_index, column=column_index, value=value)
-            cell.font = styles["body_font"]
+            cell.font = body_font
             cell.border = styles["thin_border"]
             cell.alignment = styles["body_alignment"]
 
             if zebra_fill is not None:
                 cell.fill = zebra_fill
             if count_column is not None and column_index == count_column:
-                cell.font = styles["body_bold_font"]
+                cell.font = bold_font
+            if column_index in numeric_columns:
+                cell.alignment = styles["right_alignment"]
+            elif column_index in center_columns:
+                cell.alignment = styles["center_alignment"]
 
         severity_value = str(row_values[severity_column - 1])
         severity_cell = sheet.cell(row=row_index, column=severity_column)
-        severity_cell.font = styles["body_bold_font"]
+        severity_cell.font = bold_font
+        severity_cell.alignment = styles["center_alignment"]
 
         if severity_value == "High":
             severity_cell.fill = styles["high_fill"]
@@ -212,6 +293,7 @@ def apply_table(
             severity_cell.fill = styles["medium_fill"]
         elif severity_value == "Low":
             severity_cell.fill = styles["low_fill"]
+        sheet.row_dimensions[row_index].height = 30
 
     last_row = max(header_row, data_start_row + len(rows) - 1)
     last_column = get_column_letter(column_count)
@@ -221,75 +303,316 @@ def apply_table(
         last_row
     )
     sheet.freeze_panes = "A4"
-    sheet.sheet_view.showGridLines = False
-    auto_fit_columns(sheet, column_count, last_row)
+    for column_index, width in enumerate(column_widths, 1):
+        sheet.column_dimensions[chr(64 + column_index)].width = width
+    apply_common_sheet_settings(
+        sheet,
+        "$1:$3",
+        "A1:{0}{1}".format(chr(64 + column_count), last_row)
+    )
+
+
+def get_display_config_name(config_value):
+    file_name = os.path.basename(str(config_value or "").strip())
+    if not file_name:
+        return ""
+    if file_name.lower() == "qc_config_default.json":
+        return "Default QC Config ({0})".format(file_name)
+
+    display_name = os.path.splitext(file_name)[0].replace("_", " ").strip()
+    return "{0} ({1})".format(display_name.title(), file_name)
+
+
+def get_short_folder_name(folder_value):
+    folder_text = str(folder_value or "").strip()
+    if not folder_text:
+        return ""
+
+    normalized_path = os.path.normpath(folder_text)
+    short_name = os.path.basename(normalized_path)
+    return short_name or folder_text
+
+
+def apply_block_style(
+    sheet,
+    min_row,
+    max_row,
+    min_column,
+    max_column,
+    font,
+    fill,
+    border,
+    alignment
+):
+    for row_index in range(min_row, max_row + 1):
+        for column_index in range(min_column, max_column + 1):
+            cell = sheet.cell(row=row_index, column=column_index)
+            cell.font = font
+            cell.fill = fill
+            cell.border = border
+            cell.alignment = alignment
 
 
 def write_summary_sheet(sheet, payload, styles):
     summary_data = payload.get("summary_data", {})
     metadata = payload.get("metadata", {})
-    apply_title(sheet, "Revit QC Report", 4, styles)
-    sheet.sheet_view.showGridLines = False
+    generated_at = metadata.get("export_time", "") or metadata.get(
+        "run_time",
+        ""
+    )
 
-    summary_items = [
-        ("Project", metadata.get("project", "")),
-        ("Active Config", metadata.get("active_config", "")),
-        ("Run Mode", metadata.get("run_mode", "")),
-        ("QC Status", metadata.get("qc_status", "")),
-        ("Checked Sheets", summary_data.get("checked_sheets", 0)),
-        ("Checked Views", summary_data.get("checked_views", 0)),
+    sheet.merge_cells("A1:H2")
+    title_cell = sheet["A1"]
+    title_cell.value = "Revit QC Report"
+    title_cell.font = styles["summary_title_font"]
+    title_cell.fill = styles["navy_fill"]
+    title_cell.border = styles["title_border"]
+    title_cell.alignment = styles["title_alignment"]
+    sheet.row_dimensions[1].height = 18
+    sheet.row_dimensions[2].height = 14
+
+    sheet.merge_cells("A3:H3")
+    subtitle = "Project: {0}  |  Run Mode: {1}  |  Generated: {2}".format(
+        metadata.get("project", ""),
+        metadata.get("run_mode", ""),
+        generated_at
+    )
+    sheet["A3"] = subtitle
+    sheet["A3"].font = styles["subtitle_font"]
+    sheet["A3"].alignment = styles["body_alignment"]
+    sheet.row_dimensions[3].height = 20
+
+    for column_index in range(1, 9):
+        sheet.cell(row=4, column=column_index).fill = styles["orange_fill"]
+    sheet.row_dimensions[4].height = 4
+
+    kpi_items = [
+        ("Checked Sheets", summary_data.get("checked_sheets", 0), 1, 2, False),
+        ("Checked Views", summary_data.get("checked_views", 0), 3, 4, False),
         (
-            "Checked Parameter Elements",
-            metadata.get("checked_parameter_elements", 0)
+            "Parameter Elements",
+            metadata.get("checked_parameter_elements", 0),
+            5,
+            6,
+            False
         ),
-        ("Total Review Items", summary_data.get("total_issues", 0)),
-        ("Review Groups", metadata.get("review_group_count", 0)),
-        ("High", summary_data.get("high_count", 0)),
-        ("Medium", summary_data.get("medium_count", 0)),
-        ("Low", summary_data.get("low_count", 0)),
-        ("Run Time", metadata.get("run_time", "")),
-        ("Export Time", metadata.get("export_time", "")),
-        ("Tool Version", metadata.get("tool_version", "")),
-        ("Export Folder", metadata.get("export_folder", ""))
+        ("Review Items", summary_data.get("total_issues", 0), 7, 8, True)
     ]
-
-    for item_index, item in enumerate(summary_items):
-        card_row = 4 + int(item_index / 2)
-        card_column = 1 + (item_index % 2) * 2
-        label_cell = sheet.cell(row=card_row, column=card_column, value=item[0])
-        value_cell = sheet.cell(
-            row=card_row,
-            column=card_column + 1,
-            value=item[1]
+    for label, value, start_column, end_column, is_warning in kpi_items:
+        if start_column != end_column:
+            sheet.merge_cells(
+                start_row=5,
+                start_column=start_column,
+                end_row=5,
+                end_column=end_column
+            )
+        sheet.merge_cells(
+            start_row=6,
+            start_column=start_column,
+            end_row=7,
+            end_column=end_column
         )
+        card_fill = (
+            styles["warning_fill"]
+            if is_warning
+            else styles["summary_label_fill"]
+        )
+        apply_block_style(
+            sheet,
+            5,
+            7,
+            start_column,
+            end_column,
+            styles["summary_label_font"],
+            card_fill,
+            styles["thin_border"],
+            styles["center_alignment"]
+        )
+        label_cell = sheet.cell(row=5, column=start_column, value=label)
+        value_cell = sheet.cell(row=6, column=start_column, value=value)
+        value_cell.font = styles["kpi_value_font"]
+        value_cell.number_format = "#,##0"
 
+    sheet.merge_cells("A9:H9")
+    sheet["A9"] = "STATUS & SEVERITY"
+    sheet["A9"].font = styles["section_font"]
+    sheet["A9"].fill = styles["summary_label_fill"]
+    sheet["A9"].border = styles["thin_border"]
+    sheet["A9"].alignment = styles["body_alignment"]
+
+    status_items = [
+        (
+            "QC Status",
+            metadata.get("qc_status", ""),
+            "warning_fill",
+            False,
+            1,
+            2
+        ),
+        (
+            "Review Groups",
+            metadata.get("review_group_count", 0),
+            "white_fill",
+            True,
+            3,
+            4
+        ),
+        ("High", summary_data.get("high_count", 0), "high_fill", True, 5, 5),
+        (
+            "Medium",
+            summary_data.get("medium_count", 0),
+            "medium_fill",
+            True,
+            6,
+            7
+        ),
+        ("Low", summary_data.get("low_count", 0), "low_fill", True, 8, 8)
+    ]
+    for item in status_items:
+        start_column = item[4]
+        end_column = item[5]
+        if start_column != end_column:
+            sheet.merge_cells(
+                start_row=10,
+                start_column=start_column,
+                end_row=10,
+                end_column=end_column
+            )
+            sheet.merge_cells(
+                start_row=11,
+                start_column=start_column,
+                end_row=11,
+                end_column=end_column
+            )
+        apply_block_style(
+            sheet,
+            10,
+            10,
+            start_column,
+            end_column,
+            styles["summary_label_font"],
+            styles["summary_label_fill"],
+            styles["thin_border"],
+            styles["center_alignment"]
+        )
+        apply_block_style(
+            sheet,
+            11,
+            11,
+            start_column,
+            end_column,
+            styles["body_bold_font"],
+            styles[item[2]],
+            styles["thin_border"],
+            styles["center_alignment"]
+        )
+        label_cell = sheet.cell(row=10, column=start_column, value=item[0])
+        value_cell = sheet.cell(row=11, column=start_column, value=item[1])
         label_cell.font = styles["summary_label_font"]
-        label_cell.fill = styles["summary_label_fill"]
-        label_cell.border = styles["thin_border"]
-        label_cell.alignment = styles["body_alignment"]
         value_cell.font = styles["body_bold_font"]
-        value_cell.fill = styles["white_fill"]
-        value_cell.border = styles["thin_border"]
-        value_cell.alignment = styles["body_alignment"]
+        if item[3]:
+            value_cell.number_format = "#,##0"
 
-        if item[0] in ["Total Review Items", "Review Groups"]:
-            value_cell.fill = styles["highlight_fill"]
-            value_cell.font = styles["highlight_font"]
+    sheet.merge_cells("A14:H14")
+    sheet["A14"] = "REPORT METADATA"
+    sheet["A14"].font = styles["section_font"]
+    sheet["A14"].fill = styles["summary_label_fill"]
+    sheet["A14"].border = styles["thin_border"]
+    sheet["A14"].alignment = styles["body_alignment"]
 
-    sheet.column_dimensions["A"].width = 27
-    sheet.column_dimensions["B"].width = 34
-    sheet.column_dimensions["C"].width = 27
-    sheet.column_dimensions["D"].width = 42
+    metadata_layout = [
+        (15, 1, 2, "Project", 3, 4, metadata.get("project", "")),
+        (15, 5, 6, "Run Mode", 7, 8, metadata.get("run_mode", "")),
+        (16, 1, 2, "Generated At", 3, 4, generated_at),
+        (16, 5, 6, "Tool Version", 7, 8, metadata.get("tool_version", "")),
+        (
+            17,
+            1,
+            2,
+            "Active Config",
+            3,
+            8,
+            get_display_config_name(metadata.get("active_config", ""))
+        ),
+        (
+            18,
+            1,
+            2,
+            "Export Folder",
+            3,
+            8,
+            get_short_folder_name(metadata.get("export_folder", ""))
+        )
+    ]
+    for (
+        row_index,
+        label_start,
+        label_end,
+        label,
+        value_start,
+        value_end,
+        value
+    ) in metadata_layout:
+        if label_start != label_end:
+            sheet.merge_cells(
+                start_row=row_index,
+                start_column=label_start,
+                end_row=row_index,
+                end_column=label_end
+            )
+        if value_start != value_end:
+            sheet.merge_cells(
+                start_row=row_index,
+                start_column=value_start,
+                end_row=row_index,
+                end_column=value_end
+            )
+        apply_block_style(
+            sheet,
+            row_index,
+            row_index,
+            label_start,
+            label_end,
+            styles["summary_label_font"],
+            styles["summary_label_fill"],
+            styles["thin_border"],
+            styles["body_alignment"]
+        )
+        apply_block_style(
+            sheet,
+            row_index,
+            row_index,
+            value_start,
+            value_end,
+            styles["metadata_value_font"],
+            styles["white_fill"],
+            styles["thin_border"],
+            styles["body_alignment"]
+        )
+        sheet.cell(row=row_index, column=label_start, value=label)
+        sheet.cell(row=row_index, column=value_start, value=value)
 
-    for row_index in range(4, 12):
-        sheet.row_dimensions[row_index].height = 34
-    sheet.row_dimensions[11].height = 42
-    sheet.freeze_panes = "A4"
+    for column_letter in ["A", "B", "C", "D", "E", "F", "G", "H"]:
+        sheet.column_dimensions[column_letter].width = 12
+    for row_index in [5, 10, 14, 15, 16, 17, 18]:
+        sheet.row_dimensions[row_index].height = 22
+    sheet.row_dimensions[6].height = 24
+    sheet.row_dimensions[7].height = 24
+    sheet.row_dimensions[9].height = 22
+    sheet.row_dimensions[11].height = 28
+    sheet.row_dimensions[12].height = 8
+    sheet.freeze_panes = None
+    apply_common_sheet_settings(sheet, "$1:$4", "A1:H18")
 
 
 def create_workbook(payload):
     styles = build_styles()
     workbook = Workbook()
+    workbook._named_styles["Normal"].font = Font(
+        name=get_report_font_name(),
+        size=10,
+        color=TEXT_NAVY
+    )
     summary_sheet = workbook.active
     summary_sheet.title = "QC Summary"
     write_summary_sheet(summary_sheet, payload, styles)
@@ -297,7 +620,7 @@ def create_workbook(payload):
     review_groups_sheet = workbook.create_sheet("Review Groups")
     apply_table(
         review_groups_sheet,
-        "Review Groups",
+        "Review Group Summary",
         [
             "Category",
             "Item Type",
@@ -310,13 +633,16 @@ def create_workbook(payload):
         payload.get("review_groups", []),
         styles,
         4,
-        5
+        [18, 20, 24, 12, 10, 45, 45],
+        count_column=5,
+        numeric_columns=[5],
+        center_columns=[4]
     )
 
     key_samples_sheet = workbook.create_sheet("Key Samples")
     apply_table(
         key_samples_sheet,
-        "Key Samples",
+        "Key Review Samples",
         [
             "Category",
             "Item Type",
@@ -328,13 +654,15 @@ def create_workbook(payload):
         ],
         payload.get("key_samples", []),
         styles,
-        4
+        4,
+        [18, 20, 28, 12, 22, 45, 45],
+        center_columns=[4]
     )
 
     full_detail_sheet = workbook.create_sheet("Full Detail")
     apply_table(
         full_detail_sheet,
-        "Full Detail",
+        "Full QC Detail",
         [
             "Category",
             "Severity",
@@ -348,7 +676,10 @@ def create_workbook(payload):
         ],
         payload.get("full_detail", []),
         styles,
-        2
+        2,
+        [16, 11, 12, 18, 28, 20, 42, 30, 42],
+        center_columns=[2, 3],
+        detail_mode=True
     )
 
     return workbook

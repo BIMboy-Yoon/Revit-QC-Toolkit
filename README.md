@@ -12,6 +12,14 @@ Codex-assisted pyRevit tool for Revit 2026 drawing QC.
 - Read-only model checking
 - Git-based version control
 
+## v2.5.1 - Styled XLSX Report Polish
+
+Styled XLSX는 보고서형 `QC Summary`, 그룹 검토용 `Review Groups`, 대표 항목용
+`Key Samples`, 전체 데이터 검토용 `Full Detail` 시트로 구성됩니다. Summary에는
+KPI 카드와 상태·Severity 영역을 배치하고, 표 시트에는 고정 열 너비, 정렬,
+freeze pane, autofilter와 A4 가로 인쇄 설정을 적용합니다. QC 데이터와 CSV Export
+구조는 변경하지 않습니다.
+
 ## v2.5 - Styled XLSX Report
 
 Styled XLSX Report는 `QC Summary`, `Review Groups`, `Key Samples`, `Full Detail`

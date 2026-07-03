@@ -1,5 +1,17 @@
 # Workflow
 
+## v2.5.1 XLSX Report Layout
+
+1. 기존 QC 데이터와 Temporary JSON 구조 유지
+2. QC Summary에 KPI, Status/Severity, Metadata 영역 배치
+3. Review Groups와 Key Samples를 보고서형 검토 표로 구성
+4. Full Detail을 9pt 데이터 검토 표로 구성
+5. 모든 시트에 gridline 숨김, freeze pane, autofilter와 text wrap 적용
+6. A4 가로, fit-to-width 1페이지와 축소 여백을 적용해 보고·출력용 XLSX 생성
+
+레이아웃 마감은 XLSX 표현에만 적용되며 Sheet/View/Parameter QC, Export Options,
+Full CSV와 Summary CSV 데이터 흐름은 변경하지 않습니다.
+
 ## v2.5 Styled XLSX Export
 
 1. Export Options에서 Styled XLSX Report 선택

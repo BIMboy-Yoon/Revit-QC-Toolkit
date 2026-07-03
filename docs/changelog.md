@@ -1,5 +1,17 @@
 # Changelog
 
+## v2.5.1 - Styled XLSX Report Polish
+
+- Styled XLSX 데이터 구조와 외부 Python helper 흐름 유지
+- QC Summary를 KPI 카드, Status/Severity, Metadata 영역의 보고서형 레이아웃으로 정리
+- Review Groups, Key Samples, Full Detail 제목과 고정 열 너비 적용
+- 기본 10pt, 표 데이터 9.5pt, Full Detail 데이터 9pt 폰트 적용
+- 숫자 우측 정렬, Header 가운데 정렬, 본문 text wrap 및 vertical alignment 정리
+- 모든 시트 gridline 숨김, zoom 90, A4 가로, 1페이지 너비 맞춤 적용
+- 좌우 0.25, 상하 0.35 인쇄 여백 및 반복 제목 행 설정
+- High/Medium/Low 및 Review Items에 완화된 Severity fill 적용
+- 기존 QC 검사, Export Options, CSV Export 및 read-only 방식 유지
+
 ## v2.5 - Styled XLSX Report
 
 - IronPython QC 데이터를 임시 JSON으로 전달하는 외부 Python helper 구조 적용
