@@ -64,6 +64,7 @@ if selected_export_options is None:
     )
     script.exit()
 
+run_time = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
 sheet_config = config["sheet_qc"]
 view_config = config["view_qc"]
 parameter_config = config["parameter_qc"]
@@ -116,6 +117,20 @@ summary_data = build_summary_data(
 qc_status = get_qc_status(summary_data)
 
 csv_timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss")
+export_time = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+report_context = {
+    "project": to_text(doc.Title),
+    "active_config": CONFIG_PATH,
+    "run_mode": u"Full QC",
+    "checked_parameter_elements": checked_parameter_elements,
+    "review_group_count": len(issue_group_rows),
+    "run_time": run_time,
+    "export_time": export_time,
+    "key_issue_rows": key_issue_rows,
+    "external_python_path": export_config.get("external_python_path", u""),
+    "debug_keep_temp_json": export_config.get("debug_keep_temp_json", False),
+    "reports_dir": REPORTS_DIR
+}
 saved_full_csv_path = u""
 saved_summary_csv_path = u""
 saved_styled_xlsx_path = u""
@@ -162,7 +177,8 @@ if selected_export_options["styled_xlsx"]:
             csv_timestamp,
             VERSION,
             export_config["file_prefix"],
-            selected_export_options["folder"]
+            selected_export_options["folder"],
+            report_context
         )
     except Exception as ex:
         styled_xlsx_error = to_text(ex)

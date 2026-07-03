@@ -1,5 +1,31 @@
 # Changelog
 
+## v2.5 - Styled XLSX Report
+
+- IronPython QC 데이터를 임시 JSON으로 전달하는 외부 Python helper 구조 적용
+- `tools/make_styled_xlsx.py`에서 `openpyxl` 기반 Styled XLSX 생성
+- config `external_python_path` 우선 사용 후 `py -3`, `python`, `python3` 탐색
+- `qc_config_default.json`의 외부 Python 경로는 빈 값으로 유지
+- Git 제외 `qc_config_local.json`을 자동 탐색해 사용자 PC 설정 override
+- local config 최상위 `external_python_path`를 export 설정으로 정규화
+- 후보 Python별 `openpyxl` import probe 후 helper 실행
+- `reports/xlsx_helper_debug.log`에 후보별 command/stdout/stderr/exit code 기록
+- temp JSON, helper, XLSX 경로와 파일 존재 여부 및 실패 원인 기록
+- QC Settings에 default/local 경로, local 존재 여부와 적용된 Python 경로 표시
+- QC Settings에 External Python/openpyxl/helper/debug log 진단 및 local 예시 추가
+- debug 옵션이 꺼져 있으면 임시 JSON 자동 삭제
+- QC Summary, Review Groups, Key Samples, Full Detail 시트 생성
+- Summary에 프로젝트, config, 실행 모드, 검사 수량, 상태, 시간 및 저장 경로 기록
+- 완화된 #34495A Header, #263645 Text, #E97826 포인트 적용
+- SUIT/Malgun Gothic 폰트 적용
+- High/Medium/Low Severity fill, zebra row, 얇은 border와 text wrap 적용
+- Review Groups Count 강조 및 Recommendation 컬럼 추가
+- 표 시트 autofilter, freeze pane 및 자동 열 너비 적용
+- Run Full QC와 Quick QC의 Styled XLSX 선택 옵션 연결
+- 생성된 XLSX를 `latest_report_path.txt`의 최우선 결과로 기록
+- 외부 Python/openpyxl 미설치 또는 helper 실패 시 XLSX만 skip하고 CSV/QC 계속 실행
+- Full CSV와 Summary CSV 원본·호환 기능 유지
+
 ## v2.4 - Export Options
 
 - Run Full QC와 Quick QC 시작 시 공통 Export Options 대화상자 표시

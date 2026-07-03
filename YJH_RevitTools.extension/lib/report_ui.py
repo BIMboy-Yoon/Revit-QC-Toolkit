@@ -3,6 +3,35 @@
 from collectors import is_empty, to_text
 
 
+PORTFOLIO_OUTPUT_STYLE = u"""
+body {
+    color: #263645;
+    font-family: "Segoe UI", "Malgun Gothic", Arial, sans-serif;
+}
+h1, h2, h3, h4 {
+    color: #263645;
+}
+table {
+    color: #263645;
+}
+table, th, td {
+    border-bottom-color: #D9DEE3;
+}
+th {
+    background-color: #34495A;
+    border-bottom: 1px solid #405060;
+    color: #FFFFFF;
+}
+tr:nth-child(odd) {
+    background-color: #F2F4F6;
+}
+"""
+
+
+def apply_portfolio_output_style(output):
+    output.add_style(PORTFOLIO_OUTPUT_STYLE)
+
+
 def html_escape(value):
     return (
         to_text(value)
@@ -30,6 +59,8 @@ def render_report(
     styled_xlsx_error,
     export_options
 ):
+    apply_portfolio_output_style(output)
+
     compact_summary_rows = [
         [u"Checked Sheets", summary_data["checked_sheets"]],
         [u"Checked Views", summary_data["checked_views"]],
@@ -43,7 +74,7 @@ def render_report(
     output.print_html(
         u"""
         <div style="font-family:Segoe UI, Arial, sans-serif;">
-            <h2>Revit QC Report Automation</h2>
+            <h2 style="color:#263645;">Revit QC Report Automation</h2>
             <div style="color:#616161; margin-bottom:10px;">{0}</div>
         </div>
         """.format(html_escape(version))
@@ -138,6 +169,8 @@ def render_quick_report(
     export_options
 ):
     """Sheet + View Quick QC용 간결한 Summary를 출력한다."""
+    apply_portfolio_output_style(output)
+
     compact_summary_rows = [
         [u"Checked Sheets", summary_data["checked_sheets"]],
         [u"Checked Views", summary_data["checked_views"]],
@@ -150,9 +183,9 @@ def render_quick_report(
     output.print_html(
         u"""
         <div style="font-family:Segoe UI, Arial, sans-serif;">
-            <h2>Revit Quick QC</h2>
+            <h2 style="color:#263645;">Revit Quick QC</h2>
             <div style="color:#616161; margin-bottom:10px;">{0}</div>
-            <div style="color:#ef6c00; margin-bottom:10px;">
+            <div style="color:#E97826; margin-bottom:10px;">
                 Sheet QC + View QC / Parameter QC 제외
             </div>
         </div>
@@ -208,7 +241,7 @@ def render_export_results(
 
     output.print_html(
         u"""
-        <div style="margin-top:12px; padding:10px; border-left:4px solid #ef6c00;
+        <div style="margin-top:12px; padding:10px; border-left:4px solid #E97826;
             background-color:#fff8e1;">
             <strong>Export Results</strong><br>
             <strong>Folder:</strong> {0}<br>

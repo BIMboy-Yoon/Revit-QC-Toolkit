@@ -12,13 +12,38 @@ Codex-assisted pyRevit tool for Revit 2026 drawing QC.
 - Read-only model checking
 - Git-based version control
 
+## v2.5 - Styled XLSX Report
+
+Styled XLSX Report는 `QC Summary`, `Review Groups`, `Key Samples`, `Full Detail`
+4개 시트로 구성된 보고·공유용 결과물입니다. 다크 네이비 Header, 오렌지 포인트,
+Severity 강조, zebra row, filter, freeze pane과 자동 열 너비를 적용합니다.
+CSV는 전체 원본 데이터와 호환성을 위한 교환용 형식으로 계속 유지합니다.
+IronPython은 QC 데이터를 임시 JSON으로 저장하고 외부 Python helper를 호출합니다.
+공통 `qc_config_default.json`은 `external_python_path`를 빈 값으로 유지합니다.
+사용자 PC 경로는 Git에서 제외되는 `config/qc_config_local.json`에 저장하며,
+local override가 없거나 비어 있으면 `py -3`, `python`, `python3` 순으로 확인합니다.
+설치 명령은 `py -3 -m pip install openpyxl`입니다. 외부 Python을 찾지 못해도
+XLSX만 skip하고 CSV와 QC는 정상 완료됩니다.
+
+Styled XLSX 실행 기록은 `reports/xlsx_helper_debug.log`에 저장됩니다. QC Settings에서
+감지된 Python, openpyxl 버전, helper 경로와 마지막 debug log 위치를 확인할 수 있습니다.
+
+`config/qc_config_local.json`을 만들고 JSON 이스케이프를 적용합니다.
+
+```json
+{
+  "external_python_path": "C:\\Python312\\python.exe"
+}
+```
+
+설정 병합 순서는 `qc_config_default.json → qc_config_local.json override`입니다.
+
 ## v2.4 - Export Options
 
 Run Full QC와 Quick QC 실행 시 저장 폴더와 출력 형식을 먼저 선택합니다.
 Full CSV, Summary CSV, Styled XLSX Report를 체크박스로 선택할 수 있으며,
 Quick QC 기본값은 Full CSV OFF, Summary CSV ON, Styled XLSX ON입니다.
 선택한 폴더는 다음 실행을 위해 runtime 기록으로만 보관하고 Git에서는 제외합니다.
-Styled XLSX는 이번 버전에서 호출 구조와 warning placeholder만 제공하며,
 CSV Export와 read-only QC 검사 기능은 그대로 유지합니다.
 
 ## v2.3.1 - Toolkit Icons and Tooltips

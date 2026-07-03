@@ -40,6 +40,9 @@ source_rvt/
 real_project_files/
 screenshots/raw/
 
+# Local machine configuration
+YJH_RevitTools.extension/config/qc_config_local.json
+
 # Runtime report history
 YJH_RevitTools.extension/reports/*
 !YJH_RevitTools.extension/reports/.gitkeep

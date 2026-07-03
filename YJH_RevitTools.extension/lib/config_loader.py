@@ -7,7 +7,7 @@ import os
 
 
 DEFAULT_CONFIG = {
-    "version": "v2.3 - QC Toolkit Buttons",
+    "version": "v2.5 - Styled XLSX Report",
     "sheet_qc": {
         "require_sheet_number": True,
         "require_sheet_name": True,
@@ -56,9 +56,13 @@ DEFAULT_CONFIG = {
         "key_item_max_length": 35
     },
     "export": {
-        "file_prefix": "Revit_QC_v2.3"
+        "file_prefix": "Revit_QC",
+        "external_python_path": "",
+        "debug_keep_temp_json": False
     }
 }
+
+LOCAL_CONFIG_FILE = "qc_config_local.json"
 
 
 def _merge_dict(target, source):
@@ -76,20 +80,63 @@ def _merge_dict(target, source):
             target[key] = value
 
 
-def load_config(config_path):
-    """UTF-8 JSON 설정을 읽고 누락된 항목은 안전한 기본값으로 채운다."""
-    config = copy.deepcopy(DEFAULT_CONFIG)
+def get_local_config_path(default_config_path):
+    return os.path.join(
+        os.path.dirname(default_config_path),
+        LOCAL_CONFIG_FILE
+    )
 
+
+def _load_json_object(config_path, config_label):
     if not os.path.isfile(config_path):
         raise IOError(
-            "QC config file was not found: {0}".format(config_path)
+            "{0} config file was not found: {1}".format(
+                config_label,
+                config_path
+            )
         )
 
     with io.open(config_path, "r", encoding="utf-8-sig") as config_file:
         loaded_config = json.load(config_file)
 
     if not isinstance(loaded_config, dict):
-        raise ValueError("QC config root must be a JSON object.")
+        raise ValueError(
+            "{0} config root must be a JSON object.".format(config_label)
+        )
+
+    return loaded_config
+
+
+def _normalize_local_config(local_config):
+    """간단한 local 전용 키를 export 섹션 override로 변환한다."""
+    normalized = copy.deepcopy(local_config)
+    export_overrides = normalized.get("export", {})
+
+    if not isinstance(export_overrides, dict):
+        raise ValueError("Local config 'export' must be a JSON object.")
+
+    for key in ["external_python_path", "debug_keep_temp_json"]:
+        if key in normalized:
+            export_overrides[key] = normalized.pop(key)
+
+    if export_overrides:
+        normalized["export"] = export_overrides
+
+    return normalized
+
+
+def load_config(config_path, local_config_path=None):
+    """default JSON 로드 후 선택적 local JSON override를 재귀 병합한다."""
+    config = copy.deepcopy(DEFAULT_CONFIG)
+    loaded_config = _load_json_object(config_path, "Default QC")
 
     _merge_dict(config, loaded_config)
+
+    if local_config_path is None:
+        local_config_path = get_local_config_path(config_path)
+
+    if os.path.isfile(local_config_path):
+        local_config = _load_json_object(local_config_path, "Local QC")
+        _merge_dict(config, _normalize_local_config(local_config))
+
     return config

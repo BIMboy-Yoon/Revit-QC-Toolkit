@@ -31,7 +31,12 @@ from collectors import collect_placed_view_ids, collect_sheets, collect_views, t
 from config_loader import load_config
 from export_options import request_export_options
 from exporters import export_styled_xlsx, save_full_csv, save_summary_csv
-from grouping import build_issue_group_rows, build_summary_data, get_qc_status
+from grouping import (
+    build_issue_group_rows,
+    build_key_issue_rows,
+    build_summary_data,
+    get_qc_status
+)
 from report_history import select_latest_report_path, write_latest_report_path
 from report_ui import html_escape, render_quick_report
 
@@ -50,6 +55,7 @@ if selected_export_options is None:
     )
     script.exit()
 
+run_time = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
 view_config = config["view_qc"]
 sheets = collect_sheets(doc)
 placed_view_ids = collect_placed_view_ids(sheets)
@@ -60,9 +66,35 @@ run_sheet_checks(sheets, issue_rows, config["sheet_qc"])
 run_view_checks(checked_views, placed_view_ids, issue_rows, view_config)
 
 issue_group_rows = build_issue_group_rows(issue_rows)
+key_issue_rows = build_key_issue_rows(
+    issue_rows,
+    view_config["temporary_keywords"],
+    key_issue_limit=config["display"]["key_issue_limit"],
+    item_max_length=config["display"]["key_item_max_length"]
+)
 summary_data = build_summary_data(issue_rows, len(sheets), len(checked_views))
 qc_status = get_qc_status(summary_data)
 timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss")
+export_time = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+report_context = {
+    "project": to_text(doc.Title),
+    "active_config": CONFIG_PATH,
+    "run_mode": u"Quick QC",
+    "checked_parameter_elements": 0,
+    "review_group_count": len(issue_group_rows),
+    "run_time": run_time,
+    "export_time": export_time,
+    "key_issue_rows": key_issue_rows,
+    "external_python_path": config["export"].get(
+        "external_python_path",
+        u""
+    ),
+    "debug_keep_temp_json": config["export"].get(
+        "debug_keep_temp_json",
+        False
+    ),
+    "reports_dir": REPORTS_DIR
+}
 saved_full_csv_path = u""
 saved_summary_csv_path = u""
 saved_styled_xlsx_path = u""
@@ -109,7 +141,8 @@ if selected_export_options["styled_xlsx"]:
             timestamp,
             VERSION,
             config["export"]["file_prefix"],
-            selected_export_options["folder"]
+            selected_export_options["folder"],
+            report_context
         )
     except Exception as ex:
         styled_xlsx_error = to_text(ex)

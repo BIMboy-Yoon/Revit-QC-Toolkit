@@ -28,7 +28,7 @@ report_path, read_error = read_latest_report_path(REPORTS_DIR)
 if read_error:
     output.print_html(
         u"""
-        <div style="padding:10px; border-left:4px solid #ef6c00; background:#fff8e1;">
+        <div style="padding:10px; border-left:4px solid #E97826; background:#fff8e1;">
             <strong>마지막 리포트를 열 수 없습니다.</strong><br>{0}
         </div>
         """.format(html_escape(read_error))

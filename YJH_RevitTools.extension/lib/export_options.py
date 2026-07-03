@@ -37,7 +37,7 @@ from System.Windows.Forms import (
 
 
 LATEST_EXPORT_FOLDER_FILE = "latest_export_folder.txt"
-NAVY_COLOR = Color.FromArgb(28, 45, 68)
+NAVY_COLOR = Color.FromArgb(38, 54, 69)
 MUTED_COLOR = Color.FromArgb(102, 112, 122)
 LIGHT_BACKGROUND_COLOR = Color.FromArgb(248, 249, 251)
 

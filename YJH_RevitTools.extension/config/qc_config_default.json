@@ -1,5 +1,5 @@
 {
-  "version": "v2.4 - Export Options",
+  "version": "v2.5 - Styled XLSX Report",
   "sheet_qc": {
     "require_sheet_number": true,
     "require_sheet_name": true,
@@ -69,6 +69,8 @@
     "key_item_max_length": 35
   },
   "export": {
-    "file_prefix": "Revit_QC"
+    "file_prefix": "Revit_QC",
+    "external_python_path": "",
+    "debug_keep_temp_json": false
   }
 }

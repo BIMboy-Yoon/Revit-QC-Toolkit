@@ -1,5 +1,30 @@
 # Workflow
 
+## v2.5 Styled XLSX Export
+
+1. Export Options에서 Styled XLSX Report 선택
+2. `qc_config_default.json`을 로드하고 선택적 `qc_config_local.json`을 병합
+3. local `external_python_path`, `py -3`, `python`, `python3` 순서로 Python 탐색
+4. 후보 Python에서 `openpyxl` import 확인
+5. pyRevit QC Data를 `reports/temp`의 Temporary JSON으로 직렬화
+6. External Python Helper `tools/make_styled_xlsx.py` 실행
+7. QC Summary / Review Groups / Key Samples / Full Detail 시트 생성
+8. 선택 폴더에 `Revit_QC_Report_YYYYMMDD_HHMMSS.xlsx` 저장
+9. debug 옵션이 꺼져 있으면 Temporary JSON 삭제
+10. 생성 성공 시 XLSX 경로를 마지막 리포트로 우선 기록
+11. helper 실패 시 warning 출력 후 CSV와 QC 계속 실행
+
+각 실행의 Python probe, helper command, stdout/stderr, exit code, 임시 JSON과 XLSX
+존재 여부는 `reports/xlsx_helper_debug.log`에서 확인합니다. 실패 warning에는 이 debug
+log 경로가 포함됩니다.
+
+`pyRevit QC Data → Temporary JSON → External Python Helper → Styled XLSX Report`
+
+CSV는 원본 상세 데이터와 외부 호환을 위한 교환용 형식이며, Styled XLSX는
+검토 결과를 읽기 쉽게 전달하는 보고·공유용 형식입니다.
+외부 Python에 openpyxl이 없으면 `py -3 -m pip install openpyxl`로 설치합니다.
+개인 Python 경로는 `config/qc_config_local.json`에만 기록하며 이 파일은 Git에서 제외합니다.
+
 ## v2.4 Export Options
 
 1. Run Full QC 또는 Quick QC 실행
@@ -12,8 +37,7 @@
 8. 마지막 저장 폴더와 우선순위 결과 경로를 runtime 파일로 기록
 
 Quick QC 기본 선택은 Summary CSV와 Styled XLSX Report이며 Full CSV는 해제 상태입니다.
-Styled XLSX는 v2.4에서 선택 및 호출 구조만 연결하고, 실제 디자인 Export는 후속 단계로
-분리합니다. 결과 경로 우선순위는 Styled XLSX, Summary CSV, Full CSV 순서입니다.
+결과 경로 우선순위는 Styled XLSX, Summary CSV, Full CSV 순서입니다.
 `latest_export_folder.txt`와 `latest_report_path.txt`는 로컬 경로를 포함할 수 있어
 Git에서 제외합니다.
 
