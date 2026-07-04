@@ -1,5 +1,70 @@
 # Changelog
 
+## v2.6 - Settings Preset Manager
+
+- QC Settings, Export Options, Help, pyRevit Output와 Styled Excel Report에 공통 UI 팔레트 적용
+- Primary button을 저채도 blue-gray `#536777`, secondary border를 `#C7D0D8`로 통일
+- card fill `#F4F6F8`, border `#D6DDE3`, muted text `#5F6F7D` 적용
+- warning은 `#FFF3E8` fill과 `#C85F1A` text로 제한
+- report/XLSX 제목 및 header의 강한 navy와 orange accent line 완화
+- QC Settings mockup과 Toolkit Button Layout portfolio asset을 동일 팔레트로 갱신
+- QC Settings를 Excel Report, QC Rules, Rule Count 구조로 단순화
+- 긴 Python 경로는 기본 화면에서 숨기고 실행 파일명과 상태만 표시
+- Python, Excel Library, Excel Report 상태 카드를 사용자 중심 용어로 정리
+- Set Python..., Test, Clear 및 Use This, Copy 버튼명으로 단순화
+- Set Python...에서 Python 선택과 local 설정 저장을 한 단계로 통합
+- Rule Count 카드 높이와 여백을 확보하고 숫자를 16pt bold로 표시
+- 하단 작업을 Details, Open Log, Close 3개 소형 버튼으로 정리
+- config/helper/debug/probe/openpyxl 상세 정보는 Details에서 pyRevit Output으로 표시
+- 상태 카드와 Rule Count 카드에 고정 높이를 적용해 텍스트 하단 잘림 방지
+- QC Settings 창을 resizable Form과 Font 기반 AutoScale로 정리
+- QC Settings의 불필요한 AutoScroll을 제거해 기본 창의 세로 스크롤바 제거
+- 고정 높이 합계를 기준으로 최종 ClientSize 1040 x 1040, MinimumSize 1020 x 1000 적용
+- Excel Report 318px, QC Rules 286px, Rule Count 184px 고정 구조와 충분한 하단 여백 적용
+- Main padding 28px, 섹션 간격 22px, 하단 action 60px + margin 24px 적용
+- 모든 설정 버튼에 10pt, 중앙 정렬과 GDI text rendering을 적용해 Copy 텍스트 왜곡 방지
+- 모든 설정 버튼 최소/실높이를 42px로 통일하고 parent row 하단 여백 확보
+- Set Python 160px, Test/Clear 125px, Use This 125px 고정 폭 적용
+- Copy 155px, Open Rule Folder 245px, Reload 155px 고정 크기 FlowLayout 적용
+- Rule Set ComboBox에 10pt, ItemHeight 24px, 높이 42px와 54px row 적용
+- 상태 카드 110px, Rule Count 카드 116px 최소 높이와 GDI 텍스트 렌더링 적용
+- QC Rules 설명과 버튼 사이에 전용 spacer row를 추가해 겹침 방지
+- 스크롤 콘텐츠와 하단 버튼 영역을 분리해 기본 크기에서 스크롤 최소화
+- Details, Open Log, Close를 FlowLayoutPanel로 우측 정렬
+- Export Options에서 저장 형식을 모두 해제한 view-only QC 실행 지원
+- 저장 없는 실행은 folder 검증과 export 함수를 건너뛰고 pyRevit Output만 표시
+- 파일이 생성되지 않으면 latest report와 last export folder 기록을 유지
+- 기본 화면에서 default/local/helper/debug/probe 상세 경로 숨김
+- Styled XLSX 용어를 Styled Excel Report로 정리
+- config 폴더의 `qc_config_*.json` preset 자동 검색 및 local config 제외
+- Default QC, Interior QC, Company Template preset 제공
+- 선택 preset을 local `active_config`에 저장하고 Full/Quick QC에 적용
+- preset metadata `preset_name`, `preset_description` 추가
+- 선택 preset 복제 및 timestamp custom preset 생성 기능 추가
+- Sheet/View/Parameter Rules와 Required Parameters 요약 카드 추가
+- 잘못된 active preset은 Default QC로 fallback하고 warning metadata 제공
+- XLSX Metadata에 preset 이름과 파일명을 함께 표시
+- Help, README와 workflow에 Excel Report 및 QC Rules 흐름 반영
+- Help를 7개 안내 섹션의 카드형 HTML 화면으로 재구성
+- Help HTML 출력 실패 시 Markdown, Alert 순으로 안내하는 fallback 추가
+- Help 설명을 한국어 중심으로 현지화하고 버튼명과 주요 UI 용어는 영어로 유지
+- Help 카드의 고정 높이 없이 내용 기반 레이아웃과 compact table 적용
+- Help 기본 글자를 16px로 확대하고 1180px 폭의 제품 도움말 레이아웃 적용
+- Rule Set 작성 방법, 조정 가능 항목과 새 PC 설정 흐름을 Help에 추가
+- 반복되던 Export, Rule Set, Model Safety 설명을 각 전용 섹션으로 통합
+- Help 시작 시 Markdown 제목과 로딩 문구를 먼저 출력해 빈 output 방지
+- 외부 CSS 주입을 제거하고 단순 inline HTML 및 전체 Markdown fallback 적용
+- pyRevit output 렌더링 문제를 피해 Help를 독립 WinForms 창으로 전환
+- 1200 x 900 resizable Help Form, 스크롤 콘텐츠와 150 x 42 Close 버튼 적용
+- Help 본문 줄 수와 표 row 수를 기준으로 카드 높이를 계산해 마지막 행 clipping 방지
+- 표 header 50px, 섹션별 데이터 row 최소 58~66px 및 긴 설명 row 78px 적용
+- Help 카드 최소 높이를 섹션별 260~430px로 확대해 한글 배율 clipping 방지
+- 표 밖 Help 본문을 줄별 Label로 분리하고 항목 간 12px 여백 적용
+- 기본 흐름, Rule Set, 새 PC와 Model Safety 카드 높이를 줄간격에 맞춰 추가 확대
+- Help 본문 항목 간격을 12px로 확대하고 Subtitle에 8px 전용 spacer 적용
+- 표 첫 컬럼을 260px로 확대하고 Rule Set 카드 및 Footer 가독성 보정
+- 기존 QC 검사, Export Options, CSV, Styled XLSX helper와 read-only 방식 유지
+
 ## v2.5.2 - QC Settings UI Polish
 
 - JSON 기본 연결 프로그램 자동 실행 제거

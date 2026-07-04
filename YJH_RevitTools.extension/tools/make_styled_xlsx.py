@@ -12,15 +12,14 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
 
-HEADER_NAVY = "34495A"
-TITLE_NAVY = "3C4A57"
+HEADER_NAVY = "536777"
+TITLE_NAVY = "4A5B6A"
 TEXT_NAVY = "263645"
-SOFT_NAVY_LINE = "405060"
-ORANGE_POINT = "E97826"
-LIGHT_BORDER = "D9DEE3"
-LIGHT_FILL = "F6F7F8"
-ZEBRA_FILL = "F2F4F6"
-WARNING_FILL = "FFF1E6"
+SOFT_NAVY_LINE = "D6DDE3"
+LIGHT_BORDER = "E1E5E8"
+LIGHT_FILL = "F4F6F8"
+ZEBRA_FILL = "F4F6F8"
+WARNING_FILL = "FFF3E8"
 MEDIUM_FILL = "FFF7D6"
 LOW_FILL = "F1F3F5"
 
@@ -69,7 +68,6 @@ def build_styles():
     font_name = get_report_font_name()
     thin_side = Side(style="thin", color=LIGHT_BORDER)
     soft_navy_side = Side(style="thin", color=SOFT_NAVY_LINE)
-    orange_side = Side(style="medium", color=ORANGE_POINT)
 
     return {
         "title_font": Font(
@@ -137,7 +135,10 @@ def build_styles():
         "subtitle_font": Font(name=font_name, size=9, color="6C757D"),
         "title_fill": PatternFill(fill_type="solid", fgColor=TITLE_NAVY),
         "navy_fill": PatternFill(fill_type="solid", fgColor=HEADER_NAVY),
-        "orange_fill": PatternFill(fill_type="solid", fgColor=ORANGE_POINT),
+        "soft_line_fill": PatternFill(
+            fill_type="solid",
+            fgColor=SOFT_NAVY_LINE
+        ),
         "zebra_fill": PatternFill(fill_type="solid", fgColor=ZEBRA_FILL),
         "summary_label_fill": PatternFill(
             fill_type="solid",
@@ -160,7 +161,7 @@ def build_styles():
             top=soft_navy_side,
             bottom=soft_navy_side
         ),
-        "title_border": Border(bottom=orange_side),
+        "title_border": Border(bottom=soft_navy_side),
         "title_alignment": Alignment(
             horizontal="left",
             vertical="center",
@@ -204,8 +205,8 @@ def apply_title(sheet, title, column_count, styles):
 
     for column_index in range(1, column_count + 1):
         accent_cell = sheet.cell(row=2, column=column_index)
-        accent_cell.fill = styles["orange_fill"]
-    sheet.row_dimensions[2].height = 4
+        accent_cell.fill = styles["soft_line_fill"]
+    sheet.row_dimensions[2].height = 2
 
 
 def apply_common_sheet_settings(sheet, print_title_rows, print_area):
@@ -316,6 +317,8 @@ def get_display_config_name(config_value):
     file_name = os.path.basename(str(config_value or "").strip())
     if not file_name:
         return ""
+    if "(" in file_name and file_name.endswith(")"):
+        return file_name
     if file_name.lower() == "qc_config_default.json":
         return "Default QC Config ({0})".format(file_name)
 
@@ -365,7 +368,7 @@ def write_summary_sheet(sheet, payload, styles):
     title_cell = sheet["A1"]
     title_cell.value = "Revit QC Report"
     title_cell.font = styles["summary_title_font"]
-    title_cell.fill = styles["navy_fill"]
+    title_cell.fill = styles["title_fill"]
     title_cell.border = styles["title_border"]
     title_cell.alignment = styles["title_alignment"]
     sheet.row_dimensions[1].height = 18
@@ -383,8 +386,8 @@ def write_summary_sheet(sheet, payload, styles):
     sheet.row_dimensions[3].height = 20
 
     for column_index in range(1, 9):
-        sheet.cell(row=4, column=column_index).fill = styles["orange_fill"]
-    sheet.row_dimensions[4].height = 4
+        sheet.cell(row=4, column=column_index).fill = styles["soft_line_fill"]
+    sheet.row_dimensions[4].height = 2
 
     kpi_items = [
         ("Checked Sheets", summary_data.get("checked_sheets", 0), 1, 2, False),

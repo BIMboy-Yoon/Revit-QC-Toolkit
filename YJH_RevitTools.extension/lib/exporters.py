@@ -644,6 +644,11 @@ def build_styled_xlsx_payload(
     report_context
 ):
     active_config_path = to_text(report_context.get("active_config", u""))
+    active_config_display = to_text(
+        report_context.get("active_config_display", u"")
+    )
+    if not active_config_display:
+        active_config_display = os.path.basename(active_config_path)
     export_folder_path = to_text(export_folder)
 
     payload = {
@@ -655,7 +660,10 @@ def build_styled_xlsx_payload(
         "full_detail": build_full_detail_xlsx_rows(issue_rows),
         "metadata": {
             "project": to_text(report_context.get("project", u"")),
-            "active_config": os.path.basename(active_config_path),
+            "active_config": active_config_display,
+            "active_preset": to_text(
+                report_context.get("active_preset", u"")
+            ),
             "run_mode": to_text(report_context.get("run_mode", u"")),
             "qc_status": to_text(qc_status),
             "checked_parameter_elements": report_context.get(
@@ -671,7 +679,7 @@ def build_styled_xlsx_payload(
             )
         },
         "tool_version": to_text(version),
-        "active_config": os.path.basename(active_config_path),
+        "active_config": active_config_display,
         "export_folder": export_folder_path
     }
 

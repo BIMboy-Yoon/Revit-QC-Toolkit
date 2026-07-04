@@ -1,7 +1,7 @@
 {
   "version": "v2.6 - Settings Preset Manager",
-  "preset_name": "Default QC",
-  "preset_description": "General Sheet, View, and Parameter QC preset.",
+  "preset_name": "Interior QC",
+  "preset_description": "Interior drawing review preset for sheets, views, rooms, and key parameters.",
   "sheet_qc": {
     "require_sheet_number": true,
     "require_sheet_name": true,
@@ -71,8 +71,6 @@
     "key_item_max_length": 35
   },
   "export": {
-    "file_prefix": "Revit_QC",
-    "external_python_path": "",
-    "debug_keep_temp_json": false
+    "file_prefix": "Revit_QC_Interior"
   }
 }

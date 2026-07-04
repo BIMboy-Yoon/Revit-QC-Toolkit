@@ -1,7 +1,8 @@
 # QC Settings
 
-설정창에서 Styled XLSX용 외부 Python 경로를 선택하고 저장합니다.
+Excel Report 환경과 회사/프로젝트별 QC Rules를 관리합니다.
 
-- JSON을 직접 수정하지 않고 Browse / Save / Clear 가능
-- 사용자 경로는 Git 제외 `qc_config_local.json`에만 저장
-- 외부 Python, openpyxl, helper 및 debug log 상태 확인
+- Styled Excel Report용 Python / Excel Library 설정
+- Default / Interior / Company Rule Set 선택 및 복사
+- Sheet / View / Parameter Rule Count 확인
+- 개인 설정은 Git 제외 `qc_config_local.json`에 저장

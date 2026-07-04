@@ -43,9 +43,27 @@ from report_ui import html_escape, render_quick_report
 
 config = load_config(CONFIG_PATH)
 VERSION = config["version"]
+CONFIG_META = config.get("_config_meta", {})
+ACTIVE_CONFIG_PATH = CONFIG_META.get("active_config_path", CONFIG_PATH)
+ACTIVE_CONFIG_FILE = CONFIG_META.get(
+    "active_config_file",
+    os.path.basename(ACTIVE_CONFIG_PATH)
+)
+ACTIVE_PRESET_NAME = CONFIG_META.get("preset_name", u"Default QC")
+ACTIVE_CONFIG_DISPLAY = u"{0} ({1})".format(
+    ACTIVE_PRESET_NAME,
+    ACTIVE_CONFIG_FILE
+)
 doc = revit.doc
 output = script.get_output()
 output.set_title("Revit Quick QC {0}".format(VERSION))
+if CONFIG_META.get("warning", u""):
+    output.print_html(
+        u"<div style='padding:8px; background:#FFF1E6; color:#263645;'>"
+        u"QC Preset warning: {0}</div>".format(
+            html_escape(CONFIG_META["warning"])
+        )
+    )
 
 selected_export_options = request_export_options(REPORTS_DIR, quick_mode=True)
 
@@ -78,7 +96,9 @@ timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss")
 export_time = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
 report_context = {
     "project": to_text(doc.Title),
-    "active_config": CONFIG_PATH,
+    "active_config": ACTIVE_CONFIG_PATH,
+    "active_config_display": ACTIVE_CONFIG_DISPLAY,
+    "active_preset": ACTIVE_PRESET_NAME,
     "run_mode": u"Quick QC",
     "checked_parameter_elements": 0,
     "review_group_count": len(issue_group_rows),

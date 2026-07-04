@@ -12,6 +12,27 @@ Codex-assisted pyRevit tool for Revit 2026 drawing QC.
 - Read-only model checking
 - Git-based version control
 
+## v2.6 - Settings Preset Manager
+
+QC Settings는 `Excel Report`, `QC Rules`, `Rule Count` 구조로 정리됩니다.
+Excel Report는 보고용 Excel 생성에 필요한 Python과 Excel Library 상태를 관리하고,
+QC Rules는 Default QC, Interior QC, Company Template 또는 복사한 Rule Set을 다음
+Full/Quick QC 실행에 적용합니다. Rule Count는 현재 Rule Set의 Sheet, View,
+Parameter 규칙 수를 간단히 보여줍니다.
+
+개인 Python 경로와 `active_config`는 Git에서 제외되는 `qc_config_local.json`에
+저장됩니다. Rule Set JSON은 팀 기준으로 Git에 포함할 수 있으며, 전체 Python 경로,
+config/helper/debug 경로와 probe 정보는 기본 화면이 아닌 `Details`를 통해
+pyRevit Output에서 확인합니다.
+
+새 환경에서는 `QC Settings → Set Python... → Test → Rule Set 선택 → Use This →
+Run QC` 순서로 초기 설정을 완료합니다. `Set Python...`은 선택한 `python.exe`를
+개인 local 설정에 즉시 저장하므로 별도의 Save 단계가 필요하지 않습니다.
+
+Export는 선택 사항입니다. Full CSV, Summary CSV, Styled XLSX Report를 모두 해제해도
+QC 검사는 실행되며 결과는 pyRevit Output에 표시됩니다. 저장하지 않은 실행은 기존
+마지막 보고서 경로를 변경하지 않습니다.
+
 ## v2.5.2 - QC Settings UI
 
 QC Settings에서 JSON을 직접 열거나 수정하지 않고 `Browse Python...`으로

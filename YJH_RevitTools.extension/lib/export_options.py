@@ -19,6 +19,7 @@ from System.Windows.Forms import (
     DockStyle,
     FlowDirection,
     FlowLayoutPanel,
+    FlatStyle,
     FolderBrowserDialog,
     Form,
     FormBorderStyle,
@@ -38,12 +39,16 @@ from System.Windows.Forms import (
 
 LATEST_EXPORT_FOLDER_FILE = "latest_export_folder.txt"
 NAVY_COLOR = Color.FromArgb(38, 54, 69)
-MUTED_COLOR = Color.FromArgb(102, 112, 122)
-LIGHT_BACKGROUND_COLOR = Color.FromArgb(248, 249, 251)
+BUTTON_NAVY_COLOR = Color.FromArgb(83, 103, 119)
+BUTTON_HOVER_COLOR = Color.FromArgb(70, 88, 103)
+MUTED_COLOR = Color.FromArgb(95, 111, 125)
+BORDER_COLOR = Color.FromArgb(214, 221, 227)
+SECONDARY_BORDER_COLOR = Color.FromArgb(199, 208, 216)
+LIGHT_BACKGROUND_COLOR = Color.FromArgb(244, 246, 248)
 
 
 def get_preferred_font(size, style=FontStyle.Regular):
-    preferred_names = [u"SUIT", u"Pretendard", u"Malgun Gothic", u"Segoe UI"]
+    preferred_names = [u"Segoe UI", u"Malgun Gothic", u"Pretendard", u"SUIT"]
 
     try:
         available_names = [family.Name.lower() for family in FontFamily.Families]
@@ -214,15 +219,16 @@ class ExportOptionsForm(Form):
         self.folder_tooltip = ToolTip()
         self.folder_tooltip.SetToolTip(self.folder_text, self.folder_text.Text)
 
-        browse_button = Button()
-        browse_button.Text = "Browse..."
-        browse_button.Dock = DockStyle.Fill
-        browse_button.Margin = Padding(0)
-        browse_button.Click += self._browse_folder
-        folder_input_layout.Controls.Add(browse_button, 1, 0)
+        self.browse_button = Button()
+        self.browse_button.Text = "Browse..."
+        self.browse_button.Dock = DockStyle.Fill
+        self.browse_button.Margin = Padding(0)
+        self._apply_secondary_button_style(self.browse_button)
+        self.browse_button.Click += self._browse_folder
+        folder_input_layout.Controls.Add(self.browse_button, 1, 0)
 
         formats_label = Label()
-        formats_label.Text = "Export formats"
+        formats_label.Text = "Save Options"
         formats_label.Dock = DockStyle.Fill
         formats_label.AutoSize = False
         formats_label.ForeColor = NAVY_COLOR
@@ -260,14 +266,18 @@ class ExportOptionsForm(Form):
         )
         formats_layout.Controls.Add(self.styled_xlsx_check, 0, 2)
 
-        note_label = Label()
-        note_label.Text = "Styled XLSX creates a formatted Excel report for review and sharing."
-        note_label.Dock = DockStyle.Fill
-        note_label.AutoSize = False
-        note_label.ForeColor = MUTED_COLOR
-        note_label.Font = get_preferred_font(8.5)
-        note_label.Padding = Padding(26, 2, 0, 0)
-        formats_layout.Controls.Add(note_label, 0, 3)
+        self.export_note_label = Label()
+        self.export_note_label.Dock = DockStyle.Fill
+        self.export_note_label.AutoSize = False
+        self.export_note_label.ForeColor = MUTED_COLOR
+        self.export_note_label.Font = get_preferred_font(8.5)
+        self.export_note_label.Padding = Padding(26, 2, 0, 0)
+        formats_layout.Controls.Add(self.export_note_label, 0, 3)
+
+        self.full_csv_check.CheckedChanged += self._update_export_state
+        self.summary_csv_check.CheckedChanged += self._update_export_state
+        self.styled_xlsx_check.CheckedChanged += self._update_export_state
+        self._update_export_state(None, None)
 
         button_layout = FlowLayoutPanel()
         button_layout.Dock = DockStyle.Fill
@@ -281,6 +291,7 @@ class ExportOptionsForm(Form):
         ok_button.Text = "Run QC"
         ok_button.Size = Size(104, 34)
         ok_button.Margin = Padding(10, 0, 0, 0)
+        self._apply_primary_button_style(ok_button)
         ok_button.Click += self._confirm
         self.AcceptButton = ok_button
 
@@ -288,10 +299,31 @@ class ExportOptionsForm(Form):
         cancel_button.Text = "Cancel"
         cancel_button.Size = Size(104, 34)
         cancel_button.Margin = Padding(10, 0, 0, 0)
+        self._apply_secondary_button_style(cancel_button)
         cancel_button.DialogResult = DialogResult.Cancel
         button_layout.Controls.Add(cancel_button)
         button_layout.Controls.Add(ok_button)
         self.CancelButton = cancel_button
+
+    def _apply_secondary_button_style(self, button):
+        button.FlatStyle = FlatStyle.Flat
+        button.FlatAppearance.BorderSize = 1
+        button.FlatAppearance.BorderColor = SECONDARY_BORDER_COLOR
+        button.FlatAppearance.MouseOverBackColor = LIGHT_BACKGROUND_COLOR
+        button.FlatAppearance.MouseDownBackColor = BORDER_COLOR
+        button.BackColor = Color.White
+        button.ForeColor = NAVY_COLOR
+        button.UseVisualStyleBackColor = False
+
+    def _apply_primary_button_style(self, button):
+        button.FlatStyle = FlatStyle.Flat
+        button.FlatAppearance.BorderSize = 1
+        button.FlatAppearance.BorderColor = BUTTON_NAVY_COLOR
+        button.FlatAppearance.MouseOverBackColor = BUTTON_HOVER_COLOR
+        button.FlatAppearance.MouseDownBackColor = NAVY_COLOR
+        button.BackColor = BUTTON_NAVY_COLOR
+        button.ForeColor = Color.White
+        button.UseVisualStyleBackColor = False
 
     def _create_check_box(self, text, checked):
         check_box = CheckBox()
@@ -302,6 +334,27 @@ class ExportOptionsForm(Form):
         check_box.ForeColor = NAVY_COLOR
         check_box.Checked = checked
         return check_box
+
+    def _has_selected_export(self):
+        return (
+            self.full_csv_check.Checked
+            or self.summary_csv_check.Checked
+            or self.styled_xlsx_check.Checked
+        )
+
+    def _update_export_state(self, sender, event_args):
+        has_selected_export = self._has_selected_export()
+        self.folder_text.Enabled = has_selected_export
+        self.browse_button.Enabled = has_selected_export
+
+        if has_selected_export:
+            self.export_note_label.Text = (
+                "Selected files will be saved to the export folder."
+            )
+        else:
+            self.export_note_label.Text = (
+                "No files will be saved. Results will still be shown after QC."
+            )
 
     def _update_folder_tooltip(self, sender, event_args):
         if hasattr(self, "folder_tooltip"):
@@ -322,32 +375,21 @@ class ExportOptionsForm(Form):
         dialog.Dispose()
 
     def _confirm(self, sender, event_args):
-        if not (
-            self.full_csv_check.Checked
-            or self.summary_csv_check.Checked
-            or self.styled_xlsx_check.Checked
-        ):
-            MessageBox.Show(
-                self,
-                "Select at least one export format.",
-                "Export Options",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Warning
-            )
-            return
+        has_selected_export = self._has_selected_export()
+        folder_path = self.folder_text.Text.strip() if has_selected_export else u""
 
-        folder_path = self.folder_text.Text.strip()
-        is_valid, validation_error = validate_export_folder(folder_path)
+        if has_selected_export:
+            is_valid, validation_error = validate_export_folder(folder_path)
 
-        if not is_valid:
-            MessageBox.Show(
-                self,
-                validation_error,
-                "Export Options",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Warning
-            )
-            return
+            if not is_valid:
+                MessageBox.Show(
+                    self,
+                    validation_error,
+                    "Export Options",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning
+                )
+                return
 
         selected_formats = []
         if self.full_csv_check.Checked:
@@ -379,9 +421,10 @@ def request_export_options(reports_dir, quick_mode=False):
     if dialog_result != DialogResult.OK or selected_options is None:
         return None
 
-    try:
-        write_latest_export_folder(reports_dir, selected_options["folder"])
-    except Exception as ex:
-        selected_options["folder_history_error"] = u"{0}".format(ex)
+    if selected_options["selected_formats"]:
+        try:
+            write_latest_export_folder(reports_dir, selected_options["folder"])
+        except Exception as ex:
+            selected_options["folder_history_error"] = u"{0}".format(ex)
 
     return selected_options

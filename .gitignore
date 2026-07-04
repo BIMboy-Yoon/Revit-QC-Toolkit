@@ -20,6 +20,9 @@
 # Excel exports
 *.xlsx
 
+# PDF exports
+*.pdf
+
 # Python cache
 __pycache__/
 *.pyc
@@ -42,6 +45,9 @@ screenshots/raw/
 
 # Local machine configuration
 YJH_RevitTools.extension/config/qc_config_local.json
+
+# Locally duplicated QC rule sets
+YJH_RevitTools.extension/config/qc_config_custom_*.json
 
 # Runtime report history
 YJH_RevitTools.extension/reports/*

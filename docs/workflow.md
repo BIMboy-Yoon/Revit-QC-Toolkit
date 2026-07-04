@@ -1,5 +1,26 @@
 # Workflow
 
+## v2.6 Settings and Preset Flow
+
+1. QC Settings의 Excel Report에서 Python과 Excel Library 상태 확인
+2. Set Python...으로 Python 선택 및 저장 후 Test로 Excel Report 환경 확인
+3. QC Rules에서 Default, Interior, Company 또는 custom Rule Set 선택
+4. Use This로 `qc_config_local.json`의 `active_config` 갱신
+5. Rule Count에서 현재 기준 확인
+6. Run Full QC 또는 Quick QC 실행
+7. 선택한 Rule Set 기준으로 read-only QC 수행
+8. Export Options에서 CSV / Styled Excel Report 출력
+
+`Settings → Select Rule Set → Use This → Run QC → Export`
+
+loader는 `qc_config_default.json`을 기반으로 active preset을 병합하고 local Python
+경로를 마지막에 적용합니다. active preset 파일이 없거나 잘못된 경우 Default QC로
+fallback하며, 검사 로직과 모델 read-only 방식은 유지됩니다.
+
+기본 화면은 Python 실행 파일명과 상태만 표시합니다. 전체 Python 경로, config,
+helper, debug log, probe error와 openpyxl 정보는 `Details`를 눌러 pyRevit Output에서
+확인합니다.
+
 ## v2.5.2 QC Settings UI
 
 1. QC Settings 버튼 실행

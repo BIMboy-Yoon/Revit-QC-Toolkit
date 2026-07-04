@@ -15,15 +15,15 @@ table {
     color: #263645;
 }
 table, th, td {
-    border-bottom-color: #D9DEE3;
+    border-bottom-color: #D6DDE3;
 }
 th {
-    background-color: #34495A;
-    border-bottom: 1px solid #405060;
+    background-color: #536777;
+    border-bottom: 1px solid #4A5B6A;
     color: #FFFFFF;
 }
 tr:nth-child(odd) {
-    background-color: #F2F4F6;
+    background-color: #F4F6F8;
 }
 """
 
@@ -68,14 +68,17 @@ def render_report(
         [u"Total Review Items", summary_data["total_issues"]],
         [u"Issue Groups", issue_group_count],
         [u"QC Status", qc_status],
-        [u"Export", u" / ".join(export_options["selected_formats"])]
+        [
+            u"Export",
+            u" / ".join(export_options["selected_formats"]) or u"None"
+        ]
     ]
 
     output.print_html(
         u"""
         <div style="font-family:Segoe UI, Arial, sans-serif;">
             <h2 style="color:#263645;">Revit QC Report Automation</h2>
-            <div style="color:#616161; margin-bottom:10px;">{0}</div>
+            <div style="color:#5F6F7D; margin-bottom:10px;">{0}</div>
         </div>
         """.format(html_escape(version))
     )
@@ -108,8 +111,8 @@ def render_report(
     else:
         output.print_html(
             u"""
-            <div style="margin-top:12px; padding:10px; border:1px solid #81c784;
-                background-color:#e8f5e9; color:#2e7d32; font-weight:bold;">
+            <div style="margin-top:12px; padding:10px; border:1px solid #CFE3D4;
+                background-color:#F2F8F3; color:#1E7A3A; font-weight:bold;">
                 <strong>Review Group Summary</strong><br>
                 QC 항목이 발견되지 않았습니다.
             </div>
@@ -135,7 +138,7 @@ def render_report(
     else:
         output.print_html(
             u"""
-            <div style="margin-top:12px; color:#616161;">
+            <div style="margin-top:12px; color:#5F6F7D;">
                 <strong>Review Item Samples</strong><br>
                 표시할 핵심 Issue가 없습니다.
             </div>
@@ -177,15 +180,18 @@ def render_quick_report(
         [u"Total Review Items", summary_data["total_issues"]],
         [u"Issue Groups", issue_group_count],
         [u"QC Status", qc_status],
-        [u"Export", u" / ".join(export_options["selected_formats"])]
+        [
+            u"Export",
+            u" / ".join(export_options["selected_formats"]) or u"None"
+        ]
     ]
 
     output.print_html(
         u"""
         <div style="font-family:Segoe UI, Arial, sans-serif;">
             <h2 style="color:#263645;">Revit Quick QC</h2>
-            <div style="color:#616161; margin-bottom:10px;">{0}</div>
-            <div style="color:#E97826; margin-bottom:10px;">
+            <div style="color:#5F6F7D; margin-bottom:10px;">{0}</div>
+            <div style="color:#5F6F7D; margin-bottom:10px;">
                 Sheet QC + View QC / Parameter QC 제외
             </div>
         </div>
@@ -223,6 +229,20 @@ def render_export_results(
     saved_styled_xlsx_path,
     styled_xlsx_error
 ):
+    if not export_options["selected_formats"]:
+        output.print_html(
+            u"""
+            <div style="margin-top:12px; padding:10px; border:1px solid #D6DDE3;
+                border-left:3px solid #536777; background-color:#F4F6F8;
+                color:#263645;">
+                <strong>Export: None</strong><br>
+                No file export selected. QC results are shown in this window only.<br>
+                <span style="color:#5F6F7D;">Last saved report was not changed.</span>
+            </div>
+            """
+        )
+        return
+
     full_csv_result = _get_export_result(
         saved_full_csv_path,
         full_csv_error,
@@ -241,15 +261,16 @@ def render_export_results(
 
     output.print_html(
         u"""
-        <div style="margin-top:12px; padding:10px; border-left:4px solid #E97826;
-            background-color:#fff8e1;">
+        <div style="margin-top:12px; padding:10px; border:1px solid #D6DDE3;
+            border-left:3px solid #536777; background-color:#F4F6F8;
+            color:#263645;">
             <strong>Export Results</strong><br>
             <strong>Folder:</strong> {0}<br>
             <strong>Selected:</strong> {1}<br>
             <strong>Full CSV:</strong> {2}<br>
             <strong>Summary CSV:</strong> {3}<br>
             <strong>Styled XLSX Report:</strong> {4}<br>
-            <span style="color:#616161;">
+            <span style="color:#5F6F7D;">
                 Export 실패가 발생해도 QC 검사는 완료됩니다.
             </span>
         </div>
@@ -264,7 +285,7 @@ def render_export_results(
 
     if export_options.get("folder_history_error"):
         output.print_html(
-            u"<div style='color:#b71c1c;'>마지막 저장 폴더 기록 실패: {0}</div>".format(
+            u"<div style='color:#C85F1A; background:#FFF3E8; padding:6px;'>마지막 저장 폴더 기록 실패: {0}</div>".format(
                 html_escape(export_options["folder_history_error"])
             )
         )

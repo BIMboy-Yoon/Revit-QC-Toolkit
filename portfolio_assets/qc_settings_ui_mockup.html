@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Revit QC Settings UI Mockup</title>
+  <style>
+    :root {
+      --text: #263645;
+      --header: #536777;
+      --line: #D6DDE3;
+      --fill: #F4F6F8;
+      --card: #F4F6F8;
+      --ready: #1E7A3A;
+      --muted: #5F6F7D;
+      --button-border: #C7D0D8;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: #fff; }
+    body {
+      padding: 30px;
+      color: var(--text);
+      font-family: SUIT, Pretendard, "Malgun Gothic", "Segoe UI", sans-serif;
+    }
+    .canvas {
+      width: 1420px;
+      height: 930px;
+      margin: 0 auto;
+      overflow: hidden;
+      background: #fff;
+      border: 2px solid var(--line);
+      border-radius: 18px;
+      box-shadow: 0 14px 40px rgba(38, 54, 69, .12);
+    }
+    .titlebar {
+      height: 72px;
+      padding: 0 30px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--fill);
+      border-bottom: 2px solid var(--line);
+    }
+    .app-title { display: flex; align-items: center; gap: 20px; font-size: 22px; font-weight: 650; }
+    .app-icon { width: 32px; height: 32px; position: relative; }
+    .app-icon i { position: absolute; width: 13px; height: 13px; border-radius: 2px; background: var(--header); }
+    .app-icon i:nth-child(1) { left: 0; top: 8px; }
+    .app-icon i:nth-child(2) { left: 17px; top: 0; }
+    .app-icon i:nth-child(3) { left: 17px; top: 17px; opacity: .72; }
+    .window-actions { color: #405060; font-size: 21px; letter-spacing: 18px; }
+    main { padding: 36px 48px 24px; }
+    h1 { margin: 0 0 20px; font-size: 31px; line-height: 1.2; }
+    fieldset {
+      min-width: 0;
+      margin: 0 0 20px;
+      padding: 24px 38px 20px;
+      border: 2px solid var(--line);
+      border-radius: 12px;
+    }
+    legend { padding: 0 10px; font-size: 24px; font-weight: 700; }
+    .python-row, .rule-row { display: grid; grid-template-columns: 100px 1fr auto; align-items: center; gap: 0; }
+    .label { font-size: 19px; font-weight: 700; }
+    .value { font-size: 18px; }
+    button {
+      min-width: 120px;
+      height: 40px;
+      padding: 0 22px;
+      border: 2px solid var(--button-border);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 17px;
+      font-weight: 600;
+    }
+    button.primary { background: var(--header); border-color: var(--header); color: #fff; }
+    .status-grid, .count-grid { display: grid; gap: 20px; }
+    .status-grid { grid-template-columns: repeat(3, 1fr); margin-top: 16px; }
+    .count-grid { grid-template-columns: repeat(4, 1fr); }
+    .card { min-height: 96px; display: grid; place-content: center; gap: 9px; text-align: center; border-radius: 9px; background: var(--card); }
+    .card-title { font-size: 18px; font-weight: 650; }
+    .ready { color: var(--ready); font-size: 23px; font-weight: 750; }
+    .ready::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 10px; border-radius: 50%; background: var(--ready); }
+    .excel-actions { display: flex; justify-content: flex-end; gap: 16px; margin-top: 18px; }
+    .rules { padding-bottom: 8px; }
+    .hint { margin: 12px 0 9px; color: var(--muted); font-size: 15px; }
+    .description { height: 44px; padding: 12px 18px; border-radius: 7px; background: var(--fill); font-size: 18px; color: var(--muted); }
+    .rule-actions { display: flex; gap: 16px; margin-top: 10px; }
+    .rule-actions button { height: 32px; }
+    .count-card { min-height: 96px; display: grid; place-content: center; gap: 4px; text-align: center; border-radius: 9px; background: var(--card); }
+    .count { font-size: 34px; font-weight: 750; }
+    .bottom-actions { display: flex; justify-content: flex-end; gap: 16px; margin-top: 2px; }
+  </style>
+</head>
+<body>
+  <div class="canvas">
+    <div class="titlebar">
+      <div class="app-title"><span class="app-icon"><i></i><i></i><i></i></span>Revit QC Settings</div>
+      <div class="window-actions">— □ ×</div>
+    </div>
+    <main>
+      <h1>Manage Excel reports and QC rules.</h1>
+      <fieldset>
+        <legend>Excel Report</legend>
+        <div class="python-row"><span class="label">Python:</span><span class="value">python.exe</span><button>Set Python</button></div>
+        <div class="status-grid">
+          <div class="card"><span class="card-title">Python</span><span class="ready">Ready</span></div>
+          <div class="card"><span class="card-title">Excel Library</span><span class="ready">Ready</span></div>
+          <div class="card"><span class="card-title">Excel Report</span><span class="ready">Ready</span></div>
+        </div>
+        <div class="excel-actions"><button>Test</button><button>Clear</button></div>
+      </fieldset>
+
+      <fieldset class="rules">
+        <legend>QC Rules</legend>
+        <div class="rule-row"><span class="label">Rule Set:</span><span class="value">Default QC</span><button class="primary">Use This</button></div>
+        <div class="hint">Choose the rule set before running QC.</div>
+        <div class="description">General Sheet, View, and Parameter QC preset.</div>
+        <div class="rule-actions"><button>Copy</button><button>Open Rule Folder</button><button>Reload</button></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Rule Count</legend>
+        <div class="count-grid">
+          <div class="count-card"><span class="card-title">Sheet Rules</span><span class="count">3</span></div>
+          <div class="count-card"><span class="card-title">View Rules</span><span class="count">4</span></div>
+          <div class="count-card"><span class="card-title">Parameter Rules</span><span class="count">4</span></div>
+          <div class="count-card"><span class="card-title">Required Params</span><span class="count">2</span></div>
+        </div>
+      </fieldset>
+
+      <div class="bottom-actions"><button>Details</button><button>Open Log</button><button class="primary">Close</button></div>
+    </main>
+  </div>
+</body>
+</html>

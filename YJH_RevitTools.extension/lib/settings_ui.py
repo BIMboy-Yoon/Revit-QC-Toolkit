@@ -8,16 +8,29 @@ clr.AddReference("System.Drawing")
 clr.AddReference("System.Windows.Forms")
 
 from System.Diagnostics import Process, ProcessStartInfo
-from System.Drawing import Color, Font, FontFamily, FontStyle, Size
+from System.Drawing import (
+    Color,
+    ContentAlignment,
+    Font,
+    FontFamily,
+    FontStyle,
+    Size
+)
 from System.Windows.Forms import (
     AutoScaleMode,
+    AutoSizeMode,
     Button,
     ColumnStyle,
+    ComboBox,
+    ComboBoxStyle,
     DialogResult,
     DockStyle,
     Form,
     FormBorderStyle,
     FormStartPosition,
+    FlowDirection,
+    FlowLayoutPanel,
+    FlatStyle,
     GroupBox,
     Label,
     MessageBox,
@@ -25,30 +38,40 @@ from System.Windows.Forms import (
     MessageBoxIcon,
     OpenFileDialog,
     Padding,
+    Panel,
     RowStyle,
     SizeType,
-    TableLayoutPanel,
-    TextBox,
-    ToolTip
+    TableLayoutPanel
 )
 
-from config_loader import load_config, save_local_external_python_path
-from exporters import (
-    get_xlsx_environment_status,
-    probe_external_python_path
+from config_loader import (
+    calculate_rule_summary,
+    duplicate_qc_preset,
+    list_qc_presets,
+    load_config,
+    save_local_active_config,
+    save_local_external_python_path
 )
+from exporters import get_xlsx_environment_status, probe_external_python_path
 from report_history import open_file
 from report_ui import html_escape
 
 
 NAVY_COLOR = Color.FromArgb(38, 54, 69)
-MUTED_COLOR = Color.FromArgb(102, 112, 122)
-LIGHT_BACKGROUND_COLOR = Color.FromArgb(246, 247, 248)
-WARNING_BACKGROUND_COLOR = Color.FromArgb(255, 241, 230)
+SOFT_NAVY_COLOR = Color.FromArgb(74, 91, 106)
+BUTTON_NAVY_COLOR = Color.FromArgb(83, 103, 119)
+BUTTON_HOVER_COLOR = Color.FromArgb(70, 88, 103)
+MUTED_COLOR = Color.FromArgb(95, 111, 125)
+BORDER_COLOR = Color.FromArgb(214, 221, 227)
+SECONDARY_BORDER_COLOR = Color.FromArgb(199, 208, 216)
+LIGHT_FILL_COLOR = Color.FromArgb(244, 246, 248)
+WARNING_FILL_COLOR = Color.FromArgb(255, 243, 232)
+READY_COLOR = Color.FromArgb(30, 122, 58)
+WARNING_COLOR = Color.FromArgb(200, 95, 26)
 
 
 def get_preferred_font(size, style=FontStyle.Regular):
-    preferred_names = [u"SUIT", u"Pretendard", u"Malgun Gothic", u"Segoe UI"]
+    preferred_names = [u"Segoe UI", u"Malgun Gothic", u"Pretendard", u"SUIT"]
 
     try:
         available_names = [family.Name.lower() for family in FontFamily.Families]
@@ -96,6 +119,7 @@ class QCSettingsForm(Form):
         self.output = output
         self.default_config_path = default_config_path
         self.local_config_path = local_config_path
+        self.config_folder = os.path.dirname(default_config_path)
         self.extension_dir = extension_dir
         self.reports_dir = reports_dir
         self.helper_path = os.path.join(
@@ -107,11 +131,12 @@ class QCSettingsForm(Form):
             reports_dir,
             "xlsx_helper_debug.log"
         )
-        self.path_tooltip = ToolTip()
+        self.presets = []
+        self.selected_python_path = u""
 
         self.Text = "Revit QC Settings"
-        self.ClientSize = Size(1080, 820)
-        self.MinimumSize = Size(960, 760)
+        self.ClientSize = Size(1040, 1040)
+        self.MinimumSize = Size(1020, 1000)
         self.FormBorderStyle = FormBorderStyle.Sizable
         self.StartPosition = FormStartPosition.CenterScreen
         self.MaximizeBox = True
@@ -119,266 +144,404 @@ class QCSettingsForm(Form):
         self.ShowInTaskbar = False
         self.BackColor = Color.White
         self.ForeColor = NAVY_COLOR
-        self.Font = get_preferred_font(9.0)
-        self.AutoScaleMode = AutoScaleMode.Dpi
+        self.Font = get_preferred_font(10.0)
+        self.AutoScaleMode = AutoScaleMode.Font
 
-        main_layout = TableLayoutPanel()
-        main_layout.Dock = DockStyle.Fill
-        main_layout.Padding = Padding(24, 20, 24, 18)
-        main_layout.ColumnCount = 1
-        main_layout.RowCount = 5
-        main_layout.ColumnStyles.Add(ColumnStyle(SizeType.Percent, 100.0))
-        main_layout.RowStyles.Add(RowStyle(SizeType.Absolute, 46.0))
-        main_layout.RowStyles.Add(RowStyle(SizeType.Absolute, 190.0))
-        main_layout.RowStyles.Add(RowStyle(SizeType.Percent, 100.0))
-        main_layout.RowStyles.Add(RowStyle(SizeType.Absolute, 68.0))
-        main_layout.RowStyles.Add(RowStyle(SizeType.Absolute, 112.0))
-        self.Controls.Add(main_layout)
+        self.root_layout = TableLayoutPanel()
+        self.root_layout.Dock = DockStyle.Fill
+        self.root_layout.ColumnCount = 1
+        self.root_layout.RowCount = 3
+        self.root_layout.ColumnStyles.Add(
+            ColumnStyle(SizeType.Percent, 100.0)
+        )
+        self.root_layout.RowStyles.Add(RowStyle(SizeType.Percent, 100.0))
+        self.root_layout.RowStyles.Add(RowStyle(SizeType.Absolute, 60.0))
+        self.root_layout.RowStyles.Add(RowStyle(SizeType.Absolute, 24.0))
+        self.Controls.Add(self.root_layout)
+
+        self.main_panel = Panel()
+        self.main_panel.Dock = DockStyle.Fill
+        self.main_panel.AutoScroll = False
+        self.main_panel.BackColor = Color.White
+        self.root_layout.Controls.Add(self.main_panel, 0, 0)
+
+        self.main_layout = TableLayoutPanel()
+        self.main_layout.Dock = DockStyle.Fill
+        self.main_layout.AutoSize = False
+        self.main_layout.Padding = Padding(28)
+        self.main_layout.ColumnCount = 1
+        self.main_layout.RowCount = 4
+        self.main_layout.ColumnStyles.Add(ColumnStyle(SizeType.Percent, 100.0))
+        self.main_layout.RowStyles.Add(RowStyle(SizeType.Absolute, 68.0))
+        self.main_layout.RowStyles.Add(RowStyle(SizeType.Absolute, 340.0))
+        self.main_layout.RowStyles.Add(RowStyle(SizeType.Absolute, 308.0))
+        self.main_layout.RowStyles.Add(RowStyle(SizeType.Absolute, 184.0))
+        self.main_panel.Controls.Add(self.main_layout)
 
         intro_label = Label()
-        intro_label.Text = (
-            "Configure external Python for Styled XLSX reports. "
-            "No JSON editing required."
-        )
+        intro_label.Text = "Manage Excel reports and QC rules."
         intro_label.Dock = DockStyle.Fill
         intro_label.AutoSize = False
         intro_label.AutoEllipsis = True
-        intro_label.Font = get_preferred_font(11.0, FontStyle.Bold)
+        intro_label.MinimumSize = Size(0, 54)
+        intro_label.Margin = Padding(0, 0, 0, 14)
+        intro_label.Font = get_preferred_font(13.0, FontStyle.Bold)
         intro_label.ForeColor = NAVY_COLOR
-        intro_label.Padding = Padding(0, 5, 0, 0)
-        main_layout.Controls.Add(intro_label, 0, 0)
+        intro_label.Padding = Padding(0, 4, 0, 0)
+        self.main_layout.Controls.Add(intro_label, 0, 0)
 
-        config_group = GroupBox()
-        config_group.Text = "Config"
-        config_group.Dock = DockStyle.Fill
-        config_group.ForeColor = NAVY_COLOR
-        config_group.Font = get_preferred_font(9.5, FontStyle.Bold)
-        config_group.Padding = Padding(12, 12, 12, 10)
-        config_group.Margin = Padding(0, 0, 0, 10)
-        main_layout.Controls.Add(config_group, 0, 1)
+        self._build_report_setup()
+        self._build_preset_section()
+        self._build_rule_summary()
+        self._build_advanced_actions()
+        self._reload_all()
 
-        config_layout = self._create_field_layout(4)
-        config_group.Controls.Add(config_layout)
-        self.default_path_text = self._add_field(
-            config_layout,
-            0,
-            "Default config path",
-            True
-        )
-        self.local_path_text = self._add_field(
-            config_layout,
+    def _build_report_setup(self):
+        group = self._create_group("Excel Report")
+        group.MinimumSize = Size(0, 318)
+        self.main_layout.Controls.Add(group, 0, 1)
+        layout = TableLayoutPanel()
+        layout.Dock = DockStyle.Fill
+        layout.ColumnCount = 1
+        layout.RowCount = 4
+        layout.RowStyles.Add(RowStyle(SizeType.Absolute, 54.0))
+        layout.RowStyles.Add(RowStyle(SizeType.Absolute, 122.0))
+        layout.RowStyles.Add(RowStyle(SizeType.Absolute, 58.0))
+        self.warning_row_style = RowStyle(SizeType.Absolute, 48.0)
+        layout.RowStyles.Add(self.warning_row_style)
+        group.Controls.Add(layout)
+
+        path_layout = TableLayoutPanel()
+        path_layout.Dock = DockStyle.Fill
+        path_layout.ColumnCount = 3
+        path_layout.ColumnStyles.Add(ColumnStyle(SizeType.Absolute, 110.0))
+        path_layout.ColumnStyles.Add(ColumnStyle(SizeType.Percent, 100.0))
+        path_layout.ColumnStyles.Add(ColumnStyle(SizeType.Absolute, 160.0))
+        layout.Controls.Add(path_layout, 0, 0)
+
+        path_label = self._create_label("Python:", True)
+        path_layout.Controls.Add(path_label, 0, 0)
+        self.current_python_name = Label()
+        self.current_python_name.Dock = DockStyle.Fill
+        self.current_python_name.AutoSize = False
+        self.current_python_name.AutoEllipsis = True
+        self.current_python_name.Font = get_preferred_font(10.0, FontStyle.Bold)
+        self.current_python_name.ForeColor = NAVY_COLOR
+        self.current_python_name.Padding = Padding(4, 7, 4, 0)
+        path_layout.Controls.Add(self.current_python_name, 1, 0)
+
+        browse_button = self._create_button("Set Python...", self._browse_python)
+        browse_button.Dock = DockStyle.Fill
+        browse_button.Margin = Padding(0, 6, 0, 6)
+        path_layout.Controls.Add(browse_button, 2, 0)
+
+        status_layout = TableLayoutPanel()
+        status_layout.Dock = DockStyle.Fill
+        status_layout.ColumnCount = 3
+        status_layout.RowCount = 1
+        for column_index in range(3):
+            status_layout.ColumnStyles.Add(ColumnStyle(SizeType.Percent, 33.333))
+        layout.Controls.Add(status_layout, 0, 1)
+        self.python_status = self._add_status_card(status_layout, 0, "Python")
+        self.openpyxl_status = self._add_status_card(
+            status_layout,
             1,
-            "Local config path",
-            True
+            "Excel Library"
         )
-        self.local_exists_text = self._add_field(
-            config_layout,
-            2,
-            "Local config exists",
-            True
-        )
-        self.applied_path_text = self._add_field(
-            config_layout,
-            3,
-            "Applied external_python_path",
-            True
-        )
+        self.excel_status = self._add_status_card(status_layout, 2, "Excel Report")
 
-        environment_group = GroupBox()
-        environment_group.Text = "Styled XLSX Environment"
-        environment_group.Dock = DockStyle.Fill
-        environment_group.ForeColor = NAVY_COLOR
-        environment_group.Font = get_preferred_font(9.5, FontStyle.Bold)
-        environment_group.Padding = Padding(12, 12, 12, 10)
-        environment_group.Margin = Padding(0, 0, 0, 10)
-        main_layout.Controls.Add(environment_group, 0, 2)
-
-        environment_layout = self._create_field_layout(9)
-        environment_group.Controls.Add(environment_layout)
-        self.python_path_text = self._add_field(
-            environment_layout,
-            0,
-            "External Python Path",
-            False
-        )
-        self.python_detected_text = self._add_field(
-            environment_layout,
-            1,
-            "External Python detected",
-            True
-        )
-        self.openpyxl_text = self._add_field(
-            environment_layout,
-            2,
-            "openpyxl available",
-            True
-        )
-        self.openpyxl_version_text = self._add_field(
-            environment_layout,
-            3,
-            "openpyxl version",
-            True
-        )
-        self.python_detail_text = self._add_field(
-            environment_layout,
-            4,
-            "Python detail",
-            True
-        )
-        self.helper_script_text = self._add_field(
-            environment_layout,
-            5,
-            "Helper script",
-            True
-        )
-        self.helper_exists_text = self._add_field(
-            environment_layout,
-            6,
-            "Helper exists",
-            True
-        )
-        self.debug_log_text = self._add_field(
-            environment_layout,
-            7,
-            "Last debug log",
-            True
-        )
-        self.probe_error_text = self._add_field(
-            environment_layout,
-            8,
-            "Probe error",
-            True
-        )
-
-        self.warning_label = Label()
-        self.warning_label.Dock = DockStyle.Fill
-        self.warning_label.AutoSize = False
-        self.warning_label.BackColor = WARNING_BACKGROUND_COLOR
-        self.warning_label.ForeColor = NAVY_COLOR
-        self.warning_label.Font = get_preferred_font(8.5)
-        self.warning_label.Padding = Padding(10, 8, 10, 6)
-        self.warning_label.Margin = Padding(0, 0, 0, 8)
-        main_layout.Controls.Add(self.warning_label, 0, 3)
+        self.python_warning = Label()
+        self.python_warning.Dock = DockStyle.Fill
+        self.python_warning.AutoSize = False
+        self.python_warning.AutoEllipsis = False
+        self.python_warning.Font = get_preferred_font(9.0)
+        self.python_warning.ForeColor = WARNING_COLOR
+        self.python_warning.Padding = Padding(8, 8, 8, 0)
+        self.python_warning.Margin = Padding(0, 0, 0, 12)
+        layout.Controls.Add(self.python_warning, 0, 3)
 
         action_layout = TableLayoutPanel()
         action_layout.Dock = DockStyle.Fill
-        action_layout.Margin = Padding(0)
-        action_layout.Padding = Padding(0, 4, 0, 0)
         action_layout.ColumnCount = 4
-        action_layout.RowCount = 2
-        for column_index in range(4):
-            action_layout.ColumnStyles.Add(
-                ColumnStyle(SizeType.Percent, 25.0)
-            )
-        action_layout.RowStyles.Add(RowStyle(SizeType.Percent, 50.0))
-        action_layout.RowStyles.Add(RowStyle(SizeType.Percent, 50.0))
-        main_layout.Controls.Add(action_layout, 0, 4)
+        action_layout.ColumnStyles.Add(ColumnStyle(SizeType.Percent, 100.0))
+        action_layout.ColumnStyles.Add(ColumnStyle(SizeType.Absolute, 125.0))
+        action_layout.ColumnStyles.Add(ColumnStyle(SizeType.Absolute, 12.0))
+        action_layout.ColumnStyles.Add(ColumnStyle(SizeType.Absolute, 125.0))
+        layout.Controls.Add(action_layout, 0, 2)
+        test_button = self._create_button("Test", self._test_environment)
+        test_button.Margin = Padding(0, 4, 0, 12)
+        action_layout.Controls.Add(test_button, 1, 0)
+        clear_button = self._create_button("Clear", self._clear_python_path)
+        clear_button.Margin = Padding(0, 4, 0, 12)
+        action_layout.Controls.Add(clear_button, 3, 0)
 
-        self._add_action_button(
-            action_layout,
-            "Browse Python...",
-            self._browse_python,
-            0,
-            0
-        )
-        self._add_action_button(
-            action_layout,
-            "Save Python Path",
-            self._save_python_path,
-            1,
-            0
-        )
-        self._add_action_button(
-            action_layout,
-            "Test XLSX Environment",
-            self._test_environment,
-            2,
-            0
-        )
-        self._add_action_button(
-            action_layout,
-            "Clear Python Path",
-            self._clear_python_path,
-            3,
-            0
-        )
-        self._add_action_button(
-            action_layout,
-            "Open Config Folder",
-            self._open_config_folder,
-            0,
-            1
-        )
-        self._add_action_button(
-            action_layout,
-            "Open Debug Log",
-            self._open_debug_log,
-            1,
-            1
-        )
-        close_button = self._add_action_button(
-            action_layout,
-            "Close",
-            self._close_form,
-            3,
-            1
-        )
-        self.CancelButton = close_button
-
-        self._refresh_config_and_environment()
-
-    def _create_field_layout(self, row_count):
+    def _build_preset_section(self):
+        group = self._create_group("QC Rules")
+        group.MinimumSize = Size(0, 286)
+        self.main_layout.Controls.Add(group, 0, 2)
         layout = TableLayoutPanel()
         layout.Dock = DockStyle.Fill
-        layout.ColumnCount = 2
-        layout.RowCount = row_count
-        layout.ColumnStyles.Add(ColumnStyle(SizeType.Absolute, 250.0))
-        layout.ColumnStyles.Add(ColumnStyle(SizeType.Percent, 100.0))
-        for row_index in range(row_count):
-            layout.RowStyles.Add(RowStyle(SizeType.Percent, 100.0 / row_count))
-        return layout
+        layout.ColumnCount = 1
+        layout.RowCount = 6
+        layout.RowStyles.Add(RowStyle(SizeType.Absolute, 54.0))
+        layout.RowStyles.Add(RowStyle(SizeType.Absolute, 32.0))
+        layout.RowStyles.Add(RowStyle(SizeType.Absolute, 12.0))
+        layout.RowStyles.Add(RowStyle(SizeType.Absolute, 70.0))
+        layout.RowStyles.Add(RowStyle(SizeType.Absolute, 16.0))
+        layout.RowStyles.Add(RowStyle(SizeType.Absolute, 58.0))
+        group.Controls.Add(layout)
 
-    def _add_field(self, layout, row_index, label_text, read_only):
+        preset_layout = TableLayoutPanel()
+        preset_layout.Dock = DockStyle.Fill
+        preset_layout.ColumnCount = 3
+        preset_layout.ColumnStyles.Add(ColumnStyle(SizeType.Absolute, 110.0))
+        preset_layout.ColumnStyles.Add(ColumnStyle(SizeType.Percent, 100.0))
+        preset_layout.ColumnStyles.Add(ColumnStyle(SizeType.Absolute, 125.0))
+        layout.Controls.Add(preset_layout, 0, 0)
+        preset_layout.Controls.Add(
+            self._create_label("Rule Set:", True),
+            0,
+            0
+        )
+        self.preset_combo = ComboBox()
+        self.preset_combo.AutoSize = False
+        self.preset_combo.Dock = DockStyle.Fill
+        self.preset_combo.DropDownStyle = ComboBoxStyle.DropDownList
+        self.preset_combo.Font = get_preferred_font(10.0)
+        self.preset_combo.IntegralHeight = False
+        self.preset_combo.ItemHeight = 24
+        self.preset_combo.MinimumSize = Size(0, 42)
+        self.preset_combo.Height = 42
+        self.preset_combo.Margin = Padding(0, 6, 12, 6)
+        self.preset_combo.SelectedIndexChanged += self._preset_selection_changed
+        preset_layout.Controls.Add(self.preset_combo, 1, 0)
+        set_active_button = self._create_button("Use This", self._set_active_preset)
+        self._apply_primary_button_style(set_active_button)
+        set_active_button.Dock = DockStyle.Fill
+        set_active_button.Margin = Padding(0, 6, 0, 6)
+        preset_layout.Controls.Add(set_active_button, 2, 0)
+
+        instruction_label = Label()
+        instruction_label.Text = "Choose the rule set before running QC."
+        instruction_label.Dock = DockStyle.Fill
+        instruction_label.AutoSize = False
+        instruction_label.ForeColor = MUTED_COLOR
+        instruction_label.Font = get_preferred_font(9.0)
+        instruction_label.Padding = Padding(4, 4, 4, 0)
+        layout.Controls.Add(instruction_label, 0, 1)
+
+        self.preset_description = Label()
+        self.preset_description.Dock = DockStyle.Fill
+        self.preset_description.AutoSize = False
+        self.preset_description.ForeColor = MUTED_COLOR
+        self.preset_description.BackColor = LIGHT_FILL_COLOR
+        self.preset_description.Font = get_preferred_font(9.0)
+        self.preset_description.TextAlign = ContentAlignment.MiddleLeft
+        self.preset_description.Padding = Padding(10, 0, 10, 0)
+        layout.Controls.Add(self.preset_description, 0, 3)
+
+        buttons = FlowLayoutPanel()
+        buttons.Dock = DockStyle.Fill
+        buttons.FlowDirection = FlowDirection.LeftToRight
+        buttons.WrapContents = False
+        buttons.Padding = Padding(0, 4, 0, 12)
+        layout.Controls.Add(buttons, 0, 5)
+        dock_none = getattr(DockStyle, "None")
+        copy_button = self._create_button("Copy", self._duplicate_preset)
+        copy_button.Dock = dock_none
+        copy_button.Size = Size(155, 42)
+        copy_button.Margin = Padding(0, 0, 12, 0)
+        buttons.Controls.Add(copy_button)
+        open_folder_button = self._create_button(
+            "Open Rule Folder",
+            self._open_config_folder
+        )
+        open_folder_button.Dock = dock_none
+        open_folder_button.Size = Size(245, 42)
+        open_folder_button.Margin = Padding(0, 0, 12, 0)
+        buttons.Controls.Add(open_folder_button)
+        reload_button = self._create_button("Reload", self._reload_presets_click)
+        reload_button.Dock = dock_none
+        reload_button.Size = Size(155, 42)
+        reload_button.Margin = Padding(0)
+        buttons.Controls.Add(reload_button)
+
+    def _build_rule_summary(self):
+        group = self._create_group("Rule Count")
+        group.MinimumSize = Size(0, 184)
+        group.Margin = Padding(0)
+        self.main_layout.Controls.Add(group, 0, 3)
+        layout = TableLayoutPanel()
+        layout.Dock = DockStyle.Fill
+        layout.ColumnCount = 4
+        layout.RowCount = 1
+        for column_index in range(4):
+            layout.ColumnStyles.Add(ColumnStyle(SizeType.Percent, 25.0))
+        group.Controls.Add(layout)
+        self.sheet_rules_value = self._add_rule_card(layout, 0, "Sheet Rules")
+        self.view_rules_value = self._add_rule_card(layout, 1, "View Rules")
+        self.parameter_rules_value = self._add_rule_card(
+            layout,
+            2,
+            "Parameter Rules"
+        )
+        self.required_parameters_value = self._add_rule_card(
+            layout,
+            3,
+            "Required Params"
+        )
+
+    def _build_advanced_actions(self):
+        layout = FlowLayoutPanel()
+        layout.Dock = DockStyle.Fill
+        layout.AutoSize = False
+        layout.FlowDirection = FlowDirection.RightToLeft
+        layout.WrapContents = False
+        layout.Padding = Padding(28, 8, 28, 10)
+        self.root_layout.Controls.Add(layout, 0, 1)
+        dock_none = getattr(DockStyle, "None")
+        close_button = self._create_button("Close", self._close_form)
+        self._apply_primary_button_style(close_button)
+        close_button.Dock = dock_none
+        close_button.Size = Size(145, 42)
+        close_button.Margin = Padding(12, 0, 0, 0)
+        layout.Controls.Add(close_button)
+        open_log_button = self._create_button(
+            "Open Log",
+            self._open_debug_log
+        )
+        open_log_button.Dock = dock_none
+        open_log_button.Size = Size(145, 42)
+        open_log_button.Margin = Padding(12, 0, 0, 0)
+        layout.Controls.Add(open_log_button)
+        self.show_details_button = self._create_button(
+            "Details",
+            self._show_details
+        )
+        self.show_details_button.Dock = dock_none
+        self.show_details_button.Size = Size(145, 42)
+        self.show_details_button.Margin = Padding(12, 0, 0, 0)
+        layout.Controls.Add(self.show_details_button)
+        self.CancelButton = close_button
+
+    def _create_group(self, title):
+        group = GroupBox()
+        group.Text = title
+        group.Dock = DockStyle.Fill
+        group.ForeColor = NAVY_COLOR
+        group.Font = get_preferred_font(12.0, FontStyle.Bold)
+        group.Padding = Padding(8, 6, 8, 6)
+        group.Margin = Padding(0, 0, 0, 22)
+        return group
+
+    def _create_label(self, text, bold=False):
         label = Label()
-        label.Text = label_text
+        label.Text = text
         label.Dock = DockStyle.Fill
         label.AutoSize = False
-        label.Font = get_preferred_font(8.8, FontStyle.Bold)
         label.ForeColor = NAVY_COLOR
-        label.Padding = Padding(2, 5, 8, 0)
-        layout.Controls.Add(label, 0, row_index)
+        label.Font = get_preferred_font(
+            10.0,
+            FontStyle.Bold if bold else FontStyle.Regular
+        )
+        label.Padding = Padding(2, 7, 6, 0)
+        return label
 
-        text_box = TextBox()
-        text_box.Dock = DockStyle.Fill
-        text_box.ReadOnly = read_only
-        text_box.WordWrap = False
-        text_box.Margin = Padding(0, 2, 0, 2)
-        text_box.Font = get_preferred_font(8.8)
-        text_box.BackColor = Color.White
-        text_box.TextChanged += self._update_tooltip
-        layout.Controls.Add(text_box, 1, row_index)
-        return text_box
-
-    def _add_action_button(self, layout, text, handler, column_index, row_index):
+    def _create_button(self, text, handler):
         button = Button()
         button.Text = text
+        button.AutoSize = False
         button.Dock = DockStyle.Fill
-        button.Margin = Padding(0, 0, 10, 8)
-        button.Font = get_preferred_font(8.8)
+        button.Margin = Padding(0, 3, 10, 3)
+        button.MinimumSize = Size(0, 42)
+        button.Font = get_preferred_font(10.0)
+        button.TextAlign = ContentAlignment.MiddleCenter
+        button.UseCompatibleTextRendering = False
+        button.Padding = Padding(0)
+        button.FlatStyle = FlatStyle.Flat
+        button.FlatAppearance.BorderSize = 1
+        button.FlatAppearance.BorderColor = SECONDARY_BORDER_COLOR
+        button.FlatAppearance.MouseOverBackColor = LIGHT_FILL_COLOR
+        button.FlatAppearance.MouseDownBackColor = BORDER_COLOR
+        button.BackColor = Color.White
+        button.ForeColor = NAVY_COLOR
+        button.UseVisualStyleBackColor = False
         button.Click += handler
-        layout.Controls.Add(button, column_index, row_index)
         return button
 
-    def _update_tooltip(self, sender, event_args):
-        self.path_tooltip.SetToolTip(sender, sender.Text)
+    def _apply_primary_button_style(self, button):
+        button.FlatStyle = FlatStyle.Flat
+        button.FlatAppearance.BorderSize = 1
+        button.FlatAppearance.BorderColor = BUTTON_NAVY_COLOR
+        button.FlatAppearance.MouseOverBackColor = BUTTON_HOVER_COLOR
+        button.FlatAppearance.MouseDownBackColor = SOFT_NAVY_COLOR
+        button.BackColor = BUTTON_NAVY_COLOR
+        button.ForeColor = Color.White
+        button.UseVisualStyleBackColor = False
 
-    def _show_text_start(self, text_box):
-        text_box.SelectionStart = 0
-        text_box.SelectionLength = 0
-        text_box.ScrollToCaret()
+    def _add_status_card(self, layout, column_index, title):
+        card = TableLayoutPanel()
+        card.Dock = DockStyle.Fill
+        card.BackColor = LIGHT_FILL_COLOR
+        card.Margin = Padding(4, 0, 12, 12)
+        card.MinimumSize = Size(0, 110)
+        card.Padding = Padding(0, 10, 0, 10)
+        card.ColumnCount = 1
+        card.RowCount = 2
+        card.RowStyles.Add(RowStyle(SizeType.Absolute, 36.0))
+        card.RowStyles.Add(RowStyle(SizeType.Absolute, 54.0))
+        layout.Controls.Add(card, column_index, 0)
+        title_label = Label()
+        title_label.Text = title
+        title_label.Dock = DockStyle.Fill
+        title_label.AutoSize = False
+        title_label.TextAlign = ContentAlignment.MiddleCenter
+        title_label.Font = get_preferred_font(10.0, FontStyle.Bold)
+        title_label.ForeColor = NAVY_COLOR
+        title_label.UseCompatibleTextRendering = False
+        card.Controls.Add(title_label, 0, 0)
+        value_label = Label()
+        value_label.Dock = DockStyle.Fill
+        value_label.AutoSize = False
+        value_label.TextAlign = ContentAlignment.MiddleCenter
+        value_label.Font = get_preferred_font(12.0, FontStyle.Bold)
+        value_label.ForeColor = MUTED_COLOR
+        value_label.Padding = Padding(0)
+        value_label.UseCompatibleTextRendering = False
+        card.Controls.Add(value_label, 0, 1)
+        return value_label
 
-    def _get_current_config(self):
-        return load_config(self.default_config_path, self.local_config_path)
+    def _add_rule_card(self, layout, column_index, title):
+        card = TableLayoutPanel()
+        card.Dock = DockStyle.Fill
+        card.BackColor = LIGHT_FILL_COLOR
+        card.Margin = Padding(4, 6, 12, 12)
+        card.MinimumSize = Size(0, 116)
+        card.Padding = Padding(0, 4, 0, 6)
+        card.ColumnCount = 1
+        card.RowCount = 2
+        card.RowStyles.Add(RowStyle(SizeType.Absolute, 40.0))
+        card.RowStyles.Add(RowStyle(SizeType.Absolute, 66.0))
+        layout.Controls.Add(card, column_index, 0)
+        title_label = Label()
+        title_label.Text = title
+        title_label.Dock = DockStyle.Fill
+        title_label.AutoSize = False
+        title_label.TextAlign = ContentAlignment.MiddleCenter
+        title_label.Font = get_preferred_font(10.0, FontStyle.Bold)
+        title_label.ForeColor = NAVY_COLOR
+        title_label.UseCompatibleTextRendering = False
+        card.Controls.Add(title_label, 0, 0)
+        value_label = Label()
+        value_label.Dock = DockStyle.Fill
+        value_label.AutoSize = False
+        value_label.TextAlign = ContentAlignment.MiddleCenter
+        value_label.Font = get_preferred_font(16.0, FontStyle.Bold)
+        value_label.ForeColor = NAVY_COLOR
+        value_label.Padding = Padding(0)
+        value_label.UseCompatibleTextRendering = False
+        card.Controls.Add(value_label, 0, 1)
+        return value_label
 
     def _get_environment_status(self, python_path):
         if python_path:
@@ -398,97 +561,153 @@ class QCSettingsForm(Form):
         if u"|" in python_detail:
             version_text = python_detail.split(u"|", 1)[1]
         status["openpyxl_version"] = version_text
-        status["external_python_path"] = u""
         return status
 
-    def _refresh_config_and_environment(self, selected_path=None):
+    def _update_report_status(self, status):
+        python_ready = status.get("external_python_detected", u"No") == u"Yes"
+        openpyxl_ready = status.get("openpyxl_available", u"No") == u"Yes"
+        helper_ready = status.get("helper_exists", False)
+        self._set_status_value(
+            self.python_status,
+            u"Ready" if python_ready else u"Not Found",
+            python_ready
+        )
+        openpyxl_text = u"Ready" if openpyxl_ready else u"Need Setup"
+        self._set_status_value(
+            self.openpyxl_status,
+            openpyxl_text,
+            openpyxl_ready
+        )
+        excel_ready = python_ready and openpyxl_ready and helper_ready
+        self._set_status_value(
+            self.excel_status,
+            u"Ready" if excel_ready else u"Need Setup",
+            excel_ready
+        )
+        python_path = self.selected_python_path
+        if is_codex_runtime_path(python_path):
+            self.python_warning.Text = (
+                u"Temporary Python path detected. Select a stable Python for long-term use."
+            )
+            self.python_warning.BackColor = WARNING_FILL_COLOR
+            self.python_warning.Visible = True
+            self.warning_row_style.Height = 44.0
+        else:
+            self.python_warning.Text = u""
+            self.python_warning.BackColor = Color.White
+            self.python_warning.Visible = False
+            self.warning_row_style.Height = 0.0
+
+    def _set_status_value(self, label, text, is_ready):
+        label.Text = text
+        label.ForeColor = READY_COLOR if is_ready else WARNING_COLOR
+
+    def _update_current_python_name(self):
+        if self.selected_python_path:
+            self.current_python_name.Text = os.path.basename(
+                self.selected_python_path
+            )
+        else:
+            self.current_python_name.Text = "Automatic detection"
+
+    def _mark_environment_not_tested(self):
+        self._set_status_value(self.python_status, "Not Tested", False)
+        self._set_status_value(self.openpyxl_status, "Not Tested", False)
+        self._set_status_value(self.excel_status, "Need Setup", False)
+        if is_codex_runtime_path(self.selected_python_path):
+            self.python_warning.Text = (
+                u"Temporary Python path detected. Select a stable Python for long-term use."
+            )
+            self.python_warning.BackColor = WARNING_FILL_COLOR
+            self.python_warning.Visible = True
+            self.warning_row_style.Height = 44.0
+        else:
+            self.python_warning.Text = u""
+            self.python_warning.BackColor = Color.White
+            self.python_warning.Visible = False
+            self.warning_row_style.Height = 0.0
+
+    def _reload_all(self):
         try:
-            config = self._get_current_config()
+            config = load_config(
+                self.default_config_path,
+                self.local_config_path
+            )
         except Exception as ex:
             MessageBox.Show(
                 self,
-                u"Config could not be loaded: {0}".format(ex),
+                u"Settings could not be loaded: {0}".format(ex),
                 "Revit QC Settings",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error
             )
             return
 
-        applied_path = config.get("export", {}).get(
+        self.current_config = config
+        self.config_meta = config.get("_config_meta", {})
+        python_path = config.get("export", {}).get(
             "external_python_path",
             u""
         )
-        current_path = applied_path if selected_path is None else selected_path
-        self.default_path_text.Text = self.default_config_path
-        self.local_path_text.Text = self.local_config_path
-        self.local_exists_text.Text = (
-            u"Yes" if os.path.isfile(self.local_config_path) else u"No"
+        self.selected_python_path = python_path
+        self._update_current_python_name()
+        self.current_environment_status = self._get_environment_status(
+            python_path
         )
-        self.applied_path_text.Text = applied_path or u"(empty)"
-        self.python_path_text.Text = current_path or u""
-        for text_box in [
-            self.default_path_text,
-            self.local_path_text,
-            self.applied_path_text,
-            self.python_path_text
-        ]:
-            self._show_text_start(text_box)
-        self._update_environment_fields(
-            self._get_environment_status(current_path)
+        self._update_report_status(self.current_environment_status)
+        self._reload_presets(
+            self.config_meta.get("active_config_file", u"")
         )
-
-    def _update_environment_fields(self, status):
-        self.python_detected_text.Text = status.get(
-            "external_python_detected",
-            u"No"
-        )
-        self.openpyxl_text.Text = status.get("openpyxl_available", u"No")
-        self.openpyxl_version_text.Text = status.get(
-            "openpyxl_version",
-            u""
-        ) or u"(none)"
-        self.python_detail_text.Text = status.get(
-            "python_detail",
-            u""
-        ) or u"(none)"
-        self.helper_script_text.Text = status.get(
-            "helper_path",
-            self.helper_path
-        )
-        self.helper_exists_text.Text = (
-            u"Yes" if status.get("helper_exists", False) else u"No"
-        )
-        self.debug_log_text.Text = status.get(
-            "debug_log_path",
-            self.debug_log_path
-        )
-        self.probe_error_text.Text = status.get(
-            "probe_error",
-            u""
-        ) or u"(none)"
-        for text_box in [
-            self.python_detail_text,
-            self.helper_script_text,
-            self.debug_log_text,
-            self.probe_error_text
-        ]:
-            self._show_text_start(text_box)
-        self._update_warning(self.python_path_text.Text)
-
-    def _update_warning(self, python_path):
-        if is_codex_runtime_path(python_path):
-            self.warning_label.Text = (
-                "Warning: Current Python path appears to be a temporary Codex "
-                "runtime path. For long-term use, select a stable local Python "
-                "installation."
+        if self.config_meta.get("warning", u""):
+            self.preset_description.Text = u"Warning: {0}".format(
+                self.config_meta["warning"]
             )
-            self.warning_label.Visible = True
+            self.preset_description.BackColor = WARNING_FILL_COLOR
+        self._update_rule_summary(config)
+
+    def _reload_presets(self, selected_file_name=None):
+        self.presets = list_qc_presets(self.config_folder)
+        self.preset_combo.Items.Clear()
+        selected_index = -1
+        for preset_index, preset in enumerate(self.presets):
+            display_name = preset.get("preset_name", preset["file_name"])
+            self.preset_combo.Items.Add(display_name)
+            if preset["file_name"] == selected_file_name:
+                selected_index = preset_index
+
+        if selected_index < 0 and self.presets:
+            selected_index = 0
+        if selected_index >= 0:
+            self.preset_combo.SelectedIndex = selected_index
+
+    def _get_selected_preset(self):
+        index = self.preset_combo.SelectedIndex
+        if index < 0 or index >= len(self.presets):
+            return None
+        return self.presets[index]
+
+    def _preset_selection_changed(self, sender, event_args):
+        preset = self._get_selected_preset()
+        if preset is None:
+            self.preset_description.Text = "No preset available."
+            self.preset_description.BackColor = WARNING_FILL_COLOR
+            return
+        description = preset.get("preset_description", u"")
+        if preset.get("error", u""):
+            description = u"Invalid preset: {0}".format(preset["error"])
+            self.preset_description.BackColor = WARNING_FILL_COLOR
         else:
-            self.warning_label.Text = (
-                "Personal Python paths are stored only in qc_config_local.json, "
-                "which is excluded from Git."
-            )
-            self.warning_label.Visible = True
+            self.preset_description.BackColor = LIGHT_FILL_COLOR
+        self.preset_description.Text = description
+
+    def _update_rule_summary(self, config):
+        summary = calculate_rule_summary(config)
+        self.sheet_rules_value.Text = str(summary["sheet_rules"])
+        self.view_rules_value.Text = str(summary["view_rules"])
+        self.parameter_rules_value.Text = str(summary["parameter_rules"])
+        self.required_parameters_value.Text = str(
+            summary["required_parameters"]
+        )
 
     def _browse_python(self, sender, event_args):
         dialog = OpenFileDialog()
@@ -497,172 +716,217 @@ class QCSettingsForm(Form):
             "Python executable (python.exe)|python.exe|All files (*.*)|*.*"
         )
         dialog.CheckFileExists = True
-        dialog.CheckPathExists = True
-        current_path = self.python_path_text.Text.strip()
+        current_path = self.selected_python_path
         if os.path.isfile(current_path):
             dialog.InitialDirectory = os.path.dirname(current_path)
             dialog.FileName = os.path.basename(current_path)
-
         if dialog.ShowDialog(self) == DialogResult.OK:
-            self.python_path_text.Text = dialog.FileName
-            self._update_warning(dialog.FileName)
-
+            self.selected_python_path = dialog.FileName
+            self._update_current_python_name()
+            self._mark_environment_not_tested()
+            try:
+                save_local_external_python_path(
+                    self.local_config_path,
+                    self.selected_python_path
+                )
+                self._reload_all()
+            except Exception as ex:
+                self._show_message(
+                    u"Python path could not be saved: {0}".format(ex),
+                    MessageBoxIcon.Error
+                )
         dialog.Dispose()
 
-    def _save_python_path(self, sender, event_args):
-        python_path = self.python_path_text.Text.strip()
-        if not python_path or not os.path.isfile(python_path):
-            MessageBox.Show(
-                self,
-                "Select an existing Python executable before saving.",
-                "Revit QC Settings",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Warning
-            )
-            return
-
-        try:
-            save_local_external_python_path(
-                self.local_config_path,
-                python_path
-            )
-            self._refresh_config_and_environment()
-            MessageBox.Show(
-                self,
-                "Python path was saved to qc_config_local.json.",
-                "Revit QC Settings",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Information
-            )
-        except Exception as ex:
-            MessageBox.Show(
-                self,
-                u"Python path could not be saved: {0}".format(ex),
-                "Revit QC Settings",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error
-            )
-
     def _test_environment(self, sender, event_args):
-        python_path = self.python_path_text.Text.strip()
-        status = self._get_environment_status(python_path)
-        self._update_environment_fields(status)
-        detected = status.get("external_python_detected", u"No")
-        openpyxl_available = status.get("openpyxl_available", u"No")
-        openpyxl_version = status.get("openpyxl_version", u"") or u"(none)"
-
-        if detected == u"Yes" and openpyxl_available == u"Yes":
-            message = (
-                u"External Python detected: Yes\n"
-                u"openpyxl available: Yes\n"
-                u"openpyxl version: {0}".format(openpyxl_version)
+        status = self._get_environment_status(
+            self.selected_python_path
+        )
+        self.current_environment_status = status
+        self._update_report_status(status)
+        python_ready = status.get("external_python_detected", u"No") == u"Yes"
+        openpyxl_ready = status.get("openpyxl_available", u"No") == u"Yes"
+        if python_ready and openpyxl_ready:
+            message = u"Python and Excel Library are ready. Version: {0}".format(
+                status.get("openpyxl_version", u"") or u"unknown"
             )
             icon = MessageBoxIcon.Information
         else:
-            probe_error = status.get("probe_error", u"") or u"Unknown error"
-            install_target = python_path or u"python"
+            target = self.selected_python_path or u"python"
             message = (
-                u"External Python detected: {0}\n"
-                u"openpyxl available: {1}\n\n"
-                u"{2}\n\n"
-                u"Install:\n\"{3}\" -m pip install openpyxl".format(
-                    detected,
-                    openpyxl_available,
-                    probe_error,
-                    install_target
-                )
-            )
+                u"Styled Excel Report needs setup.\n\n{0}\n\n"
+                u"Install:\n\"{1}\" -m pip install openpyxl"
+            ).format(status.get("probe_error", u""), target)
             icon = MessageBoxIcon.Warning
-
-        MessageBox.Show(
-            self,
-            message,
-            "Styled XLSX Environment",
-            MessageBoxButtons.OK,
-            icon
-        )
+        self._show_message(message, icon)
         self._print_environment_result(status)
-
-    def _print_environment_result(self, status):
-        self.output.print_html(
-            u"""
-            <div style="font-family:Segoe UI,Arial,sans-serif; margin-top:10px;
-                padding:10px; border-left:4px solid #E97826;
-                background:#F6F7F8; color:#263645;">
-                <strong>Styled XLSX Environment Test</strong><br>
-                External Python detected: {0}<br>
-                openpyxl available: {1}<br>
-                openpyxl version: {2}<br>
-                Python detail: {3}<br>
-                Probe error: {4}
-            </div>
-            """.format(
-                html_escape(status.get("external_python_detected", u"No")),
-                html_escape(status.get("openpyxl_available", u"No")),
-                html_escape(status.get("openpyxl_version", u"") or u"(none)"),
-                html_escape(status.get("python_detail", u"") or u"(none)"),
-                html_escape(status.get("probe_error", u"") or u"(none)")
-            )
-        )
-
-    def _open_config_folder(self, sender, event_args):
-        opened, open_error = open_folder(
-            os.path.dirname(self.default_config_path)
-        )
-        if not opened:
-            MessageBox.Show(
-                self,
-                open_error,
-                "Revit QC Settings",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Warning
-            )
-
-    def _open_debug_log(self, sender, event_args):
-        if not os.path.isfile(self.debug_log_path):
-            MessageBox.Show(
-                self,
-                "No debug log found.",
-                "Revit QC Settings",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Information
-            )
-            return
-
-        opened, open_error = open_file(self.debug_log_path)
-        if not opened:
-            MessageBox.Show(
-                self,
-                open_error,
-                "Revit QC Settings",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Warning
-            )
 
     def _clear_python_path(self, sender, event_args):
         if MessageBox.Show(
             self,
-            "Clear external_python_path from qc_config_local.json?",
+            "Clear the saved Python path?",
             "Revit QC Settings",
             MessageBoxButtons.YesNo,
             MessageBoxIcon.Question
         ) != DialogResult.Yes:
             return
-
         try:
             save_local_external_python_path(self.local_config_path, u"")
-            self._refresh_config_and_environment()
+            self._reload_all()
         except Exception as ex:
-            MessageBox.Show(
-                self,
+            self._show_message(
                 u"Python path could not be cleared: {0}".format(ex),
-                "Revit QC Settings",
-                MessageBoxButtons.OK,
                 MessageBoxIcon.Error
             )
 
+    def _set_active_preset(self, sender, event_args):
+        preset = self._get_selected_preset()
+        if preset is None or preset.get("error", u""):
+            self._show_message(
+                "Select a valid Rule Set.",
+                MessageBoxIcon.Warning
+            )
+            return
+        try:
+            save_local_active_config(
+                self.local_config_path,
+                preset["file_name"]
+            )
+            self._reload_all()
+            self._show_message(
+                u"Active Rule Set changed to {0}.".format(
+                    preset["preset_name"]
+                ),
+                MessageBoxIcon.Information
+            )
+        except Exception as ex:
+            self._show_message(
+                u"Rule Set could not be activated: {0}".format(ex),
+                MessageBoxIcon.Error
+            )
+
+    def _duplicate_preset(self, sender, event_args):
+        preset = self._get_selected_preset()
+        if preset is None or preset.get("error", u""):
+            self._show_message(
+                "Select a valid Rule Set to copy.",
+                MessageBoxIcon.Warning
+            )
+            return
+        try:
+            destination_path = duplicate_qc_preset(
+                preset["path"],
+                self.config_folder
+            )
+            self._reload_presets(
+                self.config_meta.get("active_config_file", u"")
+            )
+            self._show_message(
+                u"Rule Set copied: {0}".format(
+                    os.path.basename(destination_path)
+                ),
+                MessageBoxIcon.Information
+            )
+        except Exception as ex:
+            self._show_message(
+                u"Rule Set could not be copied: {0}".format(ex),
+                MessageBoxIcon.Error
+            )
+
+    def _reload_presets_click(self, sender, event_args):
+        self._reload_all()
+
+    def _open_config_folder(self, sender, event_args):
+        opened, open_error = open_folder(self.config_folder)
+        if not opened:
+            self._show_message(open_error, MessageBoxIcon.Warning)
+
+    def _open_debug_log(self, sender, event_args):
+        if not os.path.isfile(self.debug_log_path):
+            self._show_message("No debug log found.", MessageBoxIcon.Information)
+            return
+        opened, open_error = open_file(self.debug_log_path)
+        if not opened:
+            self._show_message(open_error, MessageBoxIcon.Warning)
+
+    def _show_details(self, sender, event_args):
+        status = self.current_environment_status or {}
+        active_config_path = self.config_meta.get(
+            "active_config_path",
+            self.config_meta.get("active_config_file", u"")
+        )
+        python_path = self.selected_python_path or u"(automatic detection)"
+        probe_error = status.get("probe_error", u"") or u"(none)"
+        python_detail = status.get("python_detail", u"") or u"(none)"
+        openpyxl_detail = u"{0} (version {1})".format(
+            status.get("openpyxl_available", u"No"),
+            status.get("openpyxl_version", u"") or u"unknown"
+        )
+        self.output.print_html(
+            u"""
+            <div style="font-family:Segoe UI,Arial,sans-serif; margin-top:10px;
+                padding:12px; border:1px solid #D6DDE3;
+                border-left:3px solid #536777;
+                background:#F4F6F8; color:#263645; line-height:1.55;">
+                <strong>Revit QC Settings - Details</strong><br>
+                Default config path: {0}<br>
+                Local config path: {1}<br>
+                Active config file: {2}<br>
+                Python full path: {3}<br>
+                Helper script: {4}<br>
+                Last debug log: {5}<br>
+                Probe error: {6}<br>
+                Python detail: {7}<br>
+                openpyxl detail: {8}
+            </div>
+            """.format(
+                html_escape(self.default_config_path),
+                html_escape(self.local_config_path),
+                html_escape(active_config_path or u"(none)"),
+                html_escape(python_path),
+                html_escape(self.helper_path),
+                html_escape(self.debug_log_path),
+                html_escape(probe_error),
+                html_escape(python_detail),
+                html_escape(openpyxl_detail)
+            )
+        )
+        self._show_message(
+            "Details were printed to the pyRevit output.",
+            MessageBoxIcon.Information
+        )
+
     def _close_form(self, sender, event_args):
         self.Close()
+
+    def _show_message(self, message, icon):
+        MessageBox.Show(
+            self,
+            message,
+            "Revit QC Settings",
+            MessageBoxButtons.OK,
+            icon
+        )
+
+    def _print_environment_result(self, status):
+        self.output.print_html(
+            u"""
+            <div style="font-family:Segoe UI,Arial,sans-serif; margin-top:10px;
+                padding:10px; border:1px solid #D6DDE3;
+                border-left:3px solid #536777;
+                background:#F4F6F8; color:#263645;">
+                <strong>Styled Excel Report Test</strong><br>
+                Python: {0}<br>
+                openpyxl: {1}<br>
+                Version: {2}<br>
+                Result: {3}
+            </div>
+            """.format(
+                html_escape(status.get("external_python_detected", u"No")),
+                html_escape(status.get("openpyxl_available", u"No")),
+                html_escape(status.get("openpyxl_version", u"") or u"(none)"),
+                html_escape(status.get("probe_error", u"") or u"Ready")
+            )
+        )
 
 
 def show_settings_dialog(
