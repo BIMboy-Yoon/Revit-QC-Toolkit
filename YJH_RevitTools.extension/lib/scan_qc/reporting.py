@@ -212,11 +212,87 @@ def _render_standards_check(output, standards_result):
     )
 
 
+def _view_name_or_status(view_result):
+    if view_result["created"]:
+        return view_result["view_name"]
+    if not view_result["requested"]:
+        return u"Not requested"
+    return u"Not created"
+
+
+def _section_box_status(view_creation_result):
+    view3d_result = view_creation_result["view3d"]
+    if not view3d_result["requested"]:
+        return u"Not requested"
+    if not view3d_result["section_box_requested"]:
+        return u"Skipped - no selected Walls"
+    if view3d_result["section_box_applied"]:
+        return u"Applied"
+    return u"Failed"
+
+
+def _render_view_creation(output, view_creation_result):
+    plan_result = view_creation_result["plan"]
+    view3d_result = view_creation_result["view3d"]
+    output.print_md("### E. Scan QC Working Views")
+    output.print_table(
+        table_data=[
+            [u"QC Plan View", _view_name_or_status(plan_result)],
+            [u"QC Plan Template Applied", _yes_no(plan_result["template_applied"])],
+            [u"QC 3D View", _view_name_or_status(view3d_result)],
+            [u"QC 3D Template Applied", _yes_no(view3d_result["template_applied"])],
+            [u"3D Section Box", _section_box_status(view_creation_result)],
+            [
+                u"Section Box Margin",
+                u"{0} mm".format(view_creation_result["section_box_margin_mm"])
+            ]
+        ],
+        columns=[u"View Setup Item", u"Result"]
+    )
+
+    if view_creation_result["selected_wall_count"] == 0:
+        output.print_md(
+            "> **Warning:** No Wall elements were selected. Selected Walls are required "
+            "for later Scan QC analysis, and no Wall-based 3D section box was created."
+        )
+    if plan_result["error"]:
+        output.print_md(
+            u"> **Warning:** QC Plan View was not created: {0}".format(
+                plan_result["error"]
+            )
+        )
+    if plan_result["requested"] and plan_result["template_error"]:
+        output.print_md(
+            u"> **Warning:** QC Plan View Template was not applied: {0}".format(
+                plan_result["template_error"]
+            )
+        )
+    if view3d_result["error"]:
+        output.print_md(
+            u"> **Warning:** QC 3D View was not created: {0}".format(
+                view3d_result["error"]
+            )
+        )
+    if view3d_result["requested"] and view3d_result["template_error"]:
+        output.print_md(
+            u"> **Warning:** QC 3D View Template was not applied: {0}".format(
+                view3d_result["template_error"]
+            )
+        )
+    if view3d_result["section_box_requested"] and view3d_result["section_box_error"]:
+        output.print_md(
+            u"> **Warning:** QC 3D section box was not applied: {0}".format(
+                view3d_result["section_box_error"]
+            )
+        )
+
+
 def render_scan_qc_summary(
     output,
     selected_wall_count,
     selected_options,
-    standards_check
+    standards_result,
+    view_creation_result
 ):
     """Render the initial Scan QC selection summary in pyRevit output."""
     selected_output_options = selected_options["selected_output_options"]
@@ -237,8 +313,9 @@ def render_scan_qc_summary(
         ],
         columns=[u"Item", u"Value"]
     )
-    _render_standards_check(output, standards_check)
+    _render_standards_check(output, standards_result)
+    _render_view_creation(output, view_creation_result)
     output.print_md(
-        "> Standards installation phase only: no deviation calculation, point recoloring, "
-        "QC working view creation, markers, PDF creation, or CSV export was performed."
+        "> View setup phase only: no deviation calculation, point recoloring, markers, "
+        "PDF creation, or CSV export was performed."
     )

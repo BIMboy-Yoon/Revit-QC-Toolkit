@@ -26,6 +26,9 @@ DEFAULT_SETTINGS = {
         "selection_mode": u"user_select",
         "remember_last_selection": True
     },
+    "view_creation": {
+        "section_box_margin_mm": 1000
+    },
     "output": {
         "create_plan_view": True,
         "create_3d_view": True,
@@ -179,6 +182,21 @@ def get_point_cloud_options(settings):
             point_cloud.get("remember_last_selection"),
             defaults["remember_last_selection"]
         )
+    }
+
+
+def get_view_creation_options(settings):
+    view_creation = _get_section(settings, "view_creation")
+    defaults = DEFAULT_SETTINGS["view_creation"]
+    section_box_margin_mm = _safe_number(
+        view_creation.get("section_box_margin_mm"),
+        defaults["section_box_margin_mm"]
+    )
+    if section_box_margin_mm < 0:
+        section_box_margin_mm = defaults["section_box_margin_mm"]
+
+    return {
+        "section_box_margin_mm": section_box_margin_mm
     }
 
 

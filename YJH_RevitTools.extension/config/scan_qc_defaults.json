@@ -18,6 +18,9 @@
     "selection_mode": "user_select",
     "remember_last_selection": true
   },
+  "view_creation": {
+    "section_box_margin_mm": 1000
+  },
   "output": {
     "create_plan_view": true,
     "create_3d_view": true,
@@ -25,4 +28,3 @@
     "export_csv": false
   }
 }
-

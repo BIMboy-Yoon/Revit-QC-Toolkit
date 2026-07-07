@@ -238,8 +238,8 @@ class ScanQcForm(Form):
 
         phase_note = Label()
         phase_note.Text = (
-            "Standards setup phase: selected output options are summarized only. "
-            "No deviation analysis, QC working views, markers, PDF, or CSV will be created."
+            "Selected Plan and 3D working views will be created after standards setup. "
+            "No deviation analysis, markers, PDF, or CSV will be created."
         )
         phase_note.Dock = DockStyle.Fill
         phase_note.AutoSize = False
@@ -360,6 +360,10 @@ class ScanQcForm(Form):
         self.result = {
             "point_cloud_name": get_point_cloud_name(selected_point_cloud),
             "point_cloud_id": get_element_id_value(selected_point_cloud.Id),
+            "create_plan_view": self.create_plan_check.Checked,
+            "create_3d_view": self.create_3d_check.Checked,
+            "create_pdf_report": self.create_pdf_check.Checked,
+            "export_csv": self.export_csv_check.Checked,
             "selected_output_options": selected_output_options
         }
         self.DialogResult = DialogResult.OK
