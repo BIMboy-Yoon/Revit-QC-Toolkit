@@ -238,8 +238,8 @@ class ScanQcForm(Form):
 
         phase_note = Label()
         phase_note.Text = (
-            "Initial UI phase: selections are summarized only. "
-            "No deviation analysis, views, PDF, or CSV will be created."
+            "Standards setup phase: selected output options are summarized only. "
+            "No deviation analysis, QC working views, markers, PDF, or CSV will be created."
         )
         phase_note.Dock = DockStyle.Fill
         phase_note.AutoSize = False
