@@ -1,3 +1,9 @@
+## Release
+
+Latest clean distribution release:
+
+- [Revit QC Toolkit v2.7.1](https://github.com/bimmaster-Yoon/Revit-QC-Toolkit/releases/tag/v2.7.1-clean-distribution)
+
 # Revit QC Toolkit
 
 Revit QC Toolkit is a pyRevit extension for Revit 2026 that helps review BIM model,
