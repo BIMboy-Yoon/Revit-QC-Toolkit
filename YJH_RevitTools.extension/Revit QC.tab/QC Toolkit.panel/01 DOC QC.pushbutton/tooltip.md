@@ -1,5 +1,1 @@
-# DOC QC
-
-Sheet / View / Parameter 전체 도면 QC를 실행합니다.
-
-전체 문서 품질 검토용 버튼입니다.
+Sheet·View·Parameter 항목을 한 번에 검사하고 보고서로 정리합니다.
