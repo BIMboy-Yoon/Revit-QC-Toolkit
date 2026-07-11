@@ -37,6 +37,7 @@ from System.Windows.Forms import (
     FormWindowState,
     GroupBox,
     HorizontalAlignment,
+    Keys,
     Label,
     Padding,
     Panel,
@@ -45,6 +46,7 @@ from System.Windows.Forms import (
     Screen,
     SizeType,
     TableLayoutPanel,
+    TableLayoutPanelCellBorderStyle,
     TextBox,
     ToolTip
 )
@@ -77,7 +79,6 @@ from qc_ui_style import (
     BUTTON_HOVER_COLOR,
     BUTTON_NAVY_COLOR,
     HELP_BACKGROUND_COLOR,
-    MUTED_COLOR,
     NAVY_COLOR,
     OUTER_MARGIN,
     HEADER_TOP_PADDING,
@@ -122,9 +123,12 @@ REPORT_LABEL_COLUMN_WIDTH = 180
 REPORT_BADGE_COLUMN_WIDTH = 44
 REPORT_COLUMN_GAP = 12
 REPORT_ROW_HEIGHT = 40
-TOLERANCE_HEADER_HEIGHT = 32
-TOLERANCE_VALUE_HEIGHT = 38
-TOLERANCE_COLUMN_GAP = 8
+TOLERANCE_HEADER_HEIGHT = 30
+TOLERANCE_VALUE_HEIGHT = 36
+TOLERANCE_HEADER_VALUE_GAP = 6
+TOLERANCE_CARD_GAP = 12
+TOLERANCE_BORDER_COLOR = Color.FromArgb(216, 222, 229)
+SECONDARY_TEXT_COLOR = Color.FromArgb(100, 116, 135)
 WINDOW_STATE_KEY = "scan_qc_window_bounds"
 
 def format_mm_value(value):
@@ -236,6 +240,11 @@ class ScanQcForm(Form):
         tolerance_mm = get_tolerance_mm(settings)
         deviation_options = get_deviation_options(settings)
         self.default_tolerance_mm = tolerance_mm
+        self._updating_tolerances = False
+        self._last_valid_ok_max = float(tolerance_mm["ok_max"])
+        self._last_valid_review_max = float(tolerance_mm["review_max"])
+        if self._last_valid_review_max <= self._last_valid_ok_max:
+            self._last_valid_review_max = self._last_valid_ok_max + 1.0
         self.default_top_n_callouts = deviation_options["top_n_callouts"]
         output_defaults = get_output_options(settings)
         report_defaults = get_report_options(settings)
@@ -404,7 +413,8 @@ class ScanQcForm(Form):
         selected_wall_instruction.Dock = DockStyle.Fill
         selected_wall_instruction.AutoSize = True
         selected_wall_instruction.MinimumSize = Size(0, 32)
-        selected_wall_instruction.ForeColor = MUTED_COLOR
+        selected_wall_instruction.ForeColor = SECONDARY_TEXT_COLOR
+        selected_wall_instruction.Font = get_preferred_font(9.0)
         selected_wall_instruction.TextAlign = ContentAlignment.MiddleLeft
         selected_walls_layout.Controls.Add(selected_wall_instruction, 1, 0)
 
@@ -448,7 +458,8 @@ class ScanQcForm(Form):
         self.selected_source_plan_label.Dock = DockStyle.Fill
         self.selected_source_plan_label.AutoSize = False
         self.selected_source_plan_label.MinimumSize = Size(0, 22)
-        self.selected_source_plan_label.ForeColor = MUTED_COLOR
+        self.selected_source_plan_label.ForeColor = SECONDARY_TEXT_COLOR
+        self.selected_source_plan_label.Font = get_preferred_font(9.0)
         self.selected_source_plan_label.AutoEllipsis = True
         source_plan_layout.Controls.Add(self.selected_source_plan_label, 0, 1)
 
@@ -625,7 +636,8 @@ class ScanQcForm(Form):
         self.target_filter_help_label.Dock = DockStyle.Top
         self.target_filter_help_label.AutoSize = True
         self.target_filter_help_label.MaximumSize = Size(980, 0)
-        self.target_filter_help_label.ForeColor = MUTED_COLOR
+        self.target_filter_help_label.ForeColor = SECONDARY_TEXT_COLOR
+        self.target_filter_help_label.Font = get_preferred_font(9.0)
         self.target_filter_help_label.TextAlign = ContentAlignment.MiddleLeft
         self.target_filter_help_label.Padding = Padding(0, 4, 0, 4)
         self.target_filter_help_label.UseCompatibleTextRendering = True
@@ -676,7 +688,8 @@ class ScanQcForm(Form):
         self.selected_point_cloud_label.Dock = DockStyle.Fill
         self.selected_point_cloud_label.AutoSize = False
         self.selected_point_cloud_label.MinimumSize = Size(0, 22)
-        self.selected_point_cloud_label.ForeColor = MUTED_COLOR
+        self.selected_point_cloud_label.ForeColor = SECONDARY_TEXT_COLOR
+        self.selected_point_cloud_label.Font = get_preferred_font(9.0)
         self.selected_point_cloud_label.AutoEllipsis = True
         point_cloud_layout.Controls.Add(self.selected_point_cloud_label, 0, 1)
 
@@ -686,7 +699,8 @@ class ScanQcForm(Form):
         )
         point_cloud_help_label.Dock = DockStyle.Fill
         point_cloud_help_label.AutoSize = True
-        point_cloud_help_label.ForeColor = MUTED_COLOR
+        point_cloud_help_label.ForeColor = SECONDARY_TEXT_COLOR
+        point_cloud_help_label.Font = get_preferred_font(9.0)
         point_cloud_help_label.TextAlign = ContentAlignment.MiddleLeft
         point_cloud_help_label.Visible = False
 
@@ -718,72 +732,86 @@ class ScanQcForm(Form):
         tolerance_layout.AutoSize = True
         tolerance_layout.Padding = GROUP_CONTENT_PADDING
         tolerance_layout.ColumnCount = 3
-        tolerance_layout.RowCount = 2
+        tolerance_layout.RowCount = 1
+        tolerance_layout.CellBorderStyle = getattr(
+            TableLayoutPanelCellBorderStyle,
+            "None"
+        )
         for index in range(3):
             tolerance_layout.ColumnStyles.Add(
                 ColumnStyle(SizeType.Percent, 100.0 / 3.0)
             )
         tolerance_layout.RowStyles.Add(
-            RowStyle(SizeType.Absolute, TOLERANCE_HEADER_HEIGHT)
-        )
-        tolerance_layout.RowStyles.Add(
-            RowStyle(SizeType.Absolute, TOLERANCE_VALUE_HEIGHT)
+            RowStyle(
+                SizeType.Absolute,
+                TOLERANCE_HEADER_HEIGHT
+                + TOLERANCE_HEADER_VALUE_GAP
+                + TOLERANCE_VALUE_HEIGHT
+            )
         )
         tolerance_group.Controls.Add(tolerance_layout)
 
-        ok_header = self._create_input_label(
+        (
+            ok_card,
+            self.ok_max_border_panel,
+            self.ok_max_text
+        ) = self._create_tolerance_card(
             "OK Max (mm)",
-            Color.FromArgb(232, 245, 233)
+            Color.FromArgb(234, 245, 236),
+            tolerance_mm["ok_max"]
         )
-        review_header = self._create_input_label(
+        (
+            review_card,
+            self.review_max_border_panel,
+            self.review_max_text
+        ) = self._create_tolerance_card(
             "Review Max (mm)",
-            WARNING_BACKGROUND_COLOR
-        )
-        critical_header = self._create_input_label(
-            "Critical",
-            Color.FromArgb(252, 235, 235)
-        )
-        tolerance_layout.Controls.Add(ok_header, 0, 0)
-        tolerance_layout.Controls.Add(review_header, 1, 0)
-        tolerance_layout.Controls.Add(critical_header, 2, 0)
-
-        self.ok_max_text = self._create_tolerance_text_box(tolerance_mm["ok_max"])
-        self.review_max_text = self._create_tolerance_text_box(
+            Color.FromArgb(255, 241, 229),
             tolerance_mm["review_max"]
         )
-        self._set_tooltip(
-            self.ok_max_text,
+        (
+            critical_card,
+            self.critical_value_border_panel,
+            self.critical_value_text
+        ) = self._create_tolerance_card(
+            "Critical",
+            Color.FromArgb(251, 234, 236),
+            self._last_valid_review_max,
+            True
+        )
+        half_gap = TOLERANCE_CARD_GAP // 2
+        ok_card.Margin = Padding(0, 0, half_gap, 0)
+        review_card.Margin = Padding(half_gap, 0, half_gap, 0)
+        critical_card.Margin = Padding(half_gap, 0, 0, 0)
+        tolerance_layout.Controls.Add(ok_card, 0, 0)
+        tolerance_layout.Controls.Add(review_card, 1, 0)
+        tolerance_layout.Controls.Add(critical_card, 2, 0)
+
+        self.critical_value_text.ReadOnly = True
+        self.critical_value_text.TabStop = False
+        self.critical_value_text.BackColor = Color.White
+        self._ok_tolerance_tooltip = (
             u"OK로 볼 수 있는 최대 오차값입니다. mm 단위이며 이번 실행에만 "
             u"적용됩니다."
         )
-        self._set_tooltip(
-            self.review_max_text,
+        self._review_tolerance_tooltip = (
             u"Review와 Critical을 나누는 최대 Review 기준값입니다. 이 값을 "
             u"초과하면 Critical로 분류됩니다."
         )
-        self.critical_value_label = Label()
-        self.critical_value_label.Dock = DockStyle.Fill
-        self.critical_value_label.AutoSize = False
-        self.critical_value_label.MinimumSize = Size(0, CONTROL_HEIGHT)
-        self.critical_value_label.TextAlign = ContentAlignment.MiddleCenter
-        self.critical_value_label.BackColor = Color.FromArgb(252, 235, 235)
-        self.critical_value_label.ForeColor = NAVY_COLOR
-        self.critical_value_label.Font = get_preferred_font(
-            10.0,
-            FontStyle.Bold
+        self._set_tooltip(self.ok_max_text, self._ok_tolerance_tooltip)
+        self._set_tooltip(self.review_max_text, self._review_tolerance_tooltip)
+        self._set_tooltip(
+            self.critical_value_text,
+            u"Critical은 Review Max를 초과하는 오차입니다. Review Max 변경 시 "
+            u"자동으로 갱신됩니다."
         )
-        self.critical_value_label.Padding = Padding(0)
-        self.critical_value_label.Margin = Padding(
-            TOLERANCE_COLUMN_GAP // 2,
-            3,
-            TOLERANCE_COLUMN_GAP // 2,
-            3
-        )
-        tolerance_layout.Controls.Add(self.ok_max_text, 0, 1)
-        tolerance_layout.Controls.Add(self.review_max_text, 1, 1)
-        tolerance_layout.Controls.Add(self.critical_value_label, 2, 1)
-        self.review_max_text.TextChanged += self._update_critical_value_display
-        self._update_critical_value_display(None, None)
+        self.ok_max_text.TextChanged += self._handle_tolerance_text_changed
+        self.review_max_text.TextChanged += self._handle_tolerance_text_changed
+        self.ok_max_text.KeyDown += self._handle_tolerance_key_down
+        self.review_max_text.KeyDown += self._handle_tolerance_key_down
+        self.ok_max_text.Leave += self._handle_tolerance_leave
+        self.review_max_text.Leave += self._handle_tolerance_leave
+        self._update_critical_value_display()
 
         output_group = self._create_group("Output Options")
         main_layout.Controls.Add(output_group, 0, 5)
@@ -1022,7 +1050,8 @@ class ScanQcForm(Form):
         phase_note.AutoSize = True
         phase_note.MinimumSize = Size(0, 36)
         phase_note.UseCompatibleTextRendering = True
-        phase_note.ForeColor = MUTED_COLOR
+        phase_note.ForeColor = SECONDARY_TEXT_COLOR
+        phase_note.Font = get_preferred_font(9.0)
         phase_note.BackColor = HELP_BACKGROUND_COLOR
         phase_note.BorderStyle = BorderStyle.FixedSingle
         phase_note.TextAlign = ContentAlignment.MiddleLeft
@@ -1245,13 +1274,89 @@ class ScanQcForm(Form):
         label.Text = text
         label.Dock = DockStyle.Fill
         label.AutoSize = False
-        label.MinimumSize = Size(0, CONTROL_HEIGHT)
+        label.MinimumSize = Size(0, TOLERANCE_HEADER_HEIGHT)
         label.TextAlign = ContentAlignment.MiddleCenter
         label.BackColor = background_color
-        label.ForeColor = NAVY_COLOR
-        label.Font = get_preferred_font(9.5, FontStyle.Bold)
-        label.Margin = Padding(4)
+        label.ForeColor = Color.FromArgb(30, 45, 61)
+        label.Font = get_preferred_font(9.0, FontStyle.Bold)
+        label.Padding = Padding(0)
+        label.Margin = Padding(0)
+        label.BorderStyle = getattr(BorderStyle, "None")
         return label
+
+    def _create_tolerance_card(
+        self,
+        title,
+        header_color,
+        value,
+        read_only=False
+    ):
+        card = TableLayoutPanel()
+        card.Dock = DockStyle.Fill
+        card.AutoSize = False
+        card.MinimumSize = Size(
+            0,
+            TOLERANCE_HEADER_HEIGHT
+            + TOLERANCE_HEADER_VALUE_GAP
+            + TOLERANCE_VALUE_HEIGHT
+        )
+        card.Padding = Padding(0)
+        card.ColumnCount = 1
+        card.RowCount = 3
+        card.ColumnStyles.Add(ColumnStyle(SizeType.Percent, 100.0))
+        card.RowStyles.Add(
+            RowStyle(SizeType.Absolute, TOLERANCE_HEADER_HEIGHT)
+        )
+        card.RowStyles.Add(
+            RowStyle(SizeType.Absolute, TOLERANCE_HEADER_VALUE_GAP)
+        )
+        card.RowStyles.Add(
+            RowStyle(SizeType.Absolute, TOLERANCE_VALUE_HEIGHT)
+        )
+        card.CellBorderStyle = getattr(
+            TableLayoutPanelCellBorderStyle,
+            "None"
+        )
+
+        header = self._create_input_label(title, header_color)
+        card.Controls.Add(header, 0, 0)
+
+        spacer = Panel()
+        spacer.Dock = DockStyle.Fill
+        spacer.Margin = Padding(0)
+        spacer.BackColor = Color.White
+        card.Controls.Add(spacer, 0, 1)
+
+        border_panel = Panel()
+        border_panel.Dock = DockStyle.Fill
+        border_panel.Margin = Padding(0)
+        border_panel.Padding = Padding(1)
+        border_panel.BackColor = TOLERANCE_BORDER_COLOR
+        card.Controls.Add(border_panel, 0, 2)
+
+        value_layout = TableLayoutPanel()
+        value_layout.Dock = DockStyle.Fill
+        value_layout.AutoSize = False
+        value_layout.Margin = Padding(0)
+        value_layout.Padding = Padding(0)
+        value_layout.BackColor = Color.White
+        value_layout.ColumnCount = 1
+        value_layout.RowCount = 3
+        value_layout.ColumnStyles.Add(ColumnStyle(SizeType.Percent, 100.0))
+        value_layout.RowStyles.Add(RowStyle(SizeType.Percent, 50.0))
+        value_layout.RowStyles.Add(RowStyle(SizeType.AutoSize))
+        value_layout.RowStyles.Add(RowStyle(SizeType.Percent, 50.0))
+        value_layout.CellBorderStyle = getattr(
+            TableLayoutPanelCellBorderStyle,
+            "None"
+        )
+        border_panel.Controls.Add(value_layout)
+
+        value_control = self._create_tolerance_text_box(value)
+        value_control.ReadOnly = read_only
+        value_control.TabStop = not read_only
+        value_layout.Controls.Add(value_control, 0, 1)
+        return card, border_panel, value_control
 
     def _create_report_setting_label(self, text):
         label = Label()
@@ -1269,14 +1374,12 @@ class ScanQcForm(Form):
         text_box = TextBox()
         text_box.Text = format_mm_value(value)
         text_box.Dock = DockStyle.Fill
-        text_box.MinimumSize = Size(0, CONTROL_HEIGHT)
+        text_box.AutoSize = True
         text_box.Padding = Padding(0)
-        text_box.Margin = Padding(
-            TOLERANCE_COLUMN_GAP // 2,
-            3,
-            TOLERANCE_COLUMN_GAP // 2,
-            3
-        )
+        text_box.Margin = Padding(0)
+        text_box.BorderStyle = getattr(BorderStyle, "None")
+        text_box.BackColor = Color.White
+        text_box.ForeColor = Color.FromArgb(30, 45, 61)
         text_box.Font = get_preferred_font(11.0, FontStyle.Bold)
         text_box.TextAlign = HorizontalAlignment.Center
         return text_box
@@ -1398,8 +1501,10 @@ class ScanQcForm(Form):
             "exclude_exterior_walls": self.exclude_exterior_walls_check.Checked,
             "only_scan_qc_target_yes": self.only_scan_qc_target_yes_check.Checked,
             "point_cloud_index": self.point_cloud_combo.SelectedIndex,
-            "ok_max_text": self.ok_max_text.Text,
-            "review_max_text": self.review_max_text.Text,
+            "ok_max_text": format_mm_value(self._last_valid_ok_max),
+            "review_max_text": format_mm_value(
+                self._last_valid_review_max
+            ),
             "create_plan_view": self.create_plan_check.Checked,
             "create_3d_view": self.create_3d_check.Checked,
             "create_pdf_report": self.create_pdf_check.Checked,
@@ -1463,6 +1568,7 @@ class ScanQcForm(Form):
             "review_max_text",
             self.review_max_text.Text
         )
+        self._commit_tolerance_inputs()
         self.create_plan_check.Checked = bool(
             state.get("create_plan_view", self.create_plan_check.Checked)
         )
@@ -1503,59 +1609,121 @@ class ScanQcForm(Form):
         self._update_report_sheet_ui(None, None)
         self._update_pdf_dependency_ui(None, None)
 
-    def _parse_tolerance_input(self, text_value, fallback, label):
+    def _try_parse_tolerance(self, text_value):
         try:
             value = float(text_value)
             if value < 0:
                 raise ValueError()
-            return value, u""
+            return value
         except Exception:
-            return fallback, (
-                u"{0} tolerance value was invalid and default {1} mm was used."
-                .format(label, format_mm_value(fallback))
-            )
+            return None
 
-    def _update_critical_value_display(self, sender, event_args):
+    def _set_tolerance_feedback(self, control, is_valid, message=u""):
+        if control is None:
+            return
+        control.BackColor = Color.White
+        if control is self.ok_max_text:
+            default_tooltip = self._ok_tolerance_tooltip
+            border_panel = self.ok_max_border_panel
+        else:
+            default_tooltip = self._review_tolerance_tooltip
+            border_panel = self.review_max_border_panel
+        border_panel.BackColor = (
+            TOLERANCE_BORDER_COLOR
+            if is_valid
+            else Color.FromArgb(214, 132, 132)
+        )
+        self._set_tooltip(control, message or default_tooltip)
+
+    def _get_tolerance_validation(self):
+        ok_max = self._try_parse_tolerance(self.ok_max_text.Text)
+        review_max = self._try_parse_tolerance(self.review_max_text.Text)
+        if ok_max is None:
+            return None, None, u"OK Max는 0 이상의 숫자여야 합니다."
+        if review_max is None:
+            return None, None, u"Review Max는 0 이상의 숫자여야 합니다."
+        if review_max <= ok_max:
+            return (
+                None,
+                None,
+                u"Review Max는 OK Max보다 커야 합니다. 마지막 정상값을 유지합니다."
+            )
+        return ok_max, review_max, u""
+
+    def _handle_tolerance_text_changed(self, sender, event_args):
+        if self._updating_tolerances:
+            return
+        ok_max, review_max, message = self._get_tolerance_validation()
+        if message:
+            self._set_tolerance_feedback(sender, False, message)
+            return
+        self._last_valid_ok_max = ok_max
+        self._last_valid_review_max = review_max
+        self._set_tolerance_feedback(self.ok_max_text, True)
+        self._set_tolerance_feedback(self.review_max_text, True)
+        self._update_critical_value_display()
+
+    def _handle_tolerance_key_down(self, sender, event_args):
+        if event_args.KeyCode != Keys.Enter:
+            return
+        self._commit_tolerance_inputs(sender)
         try:
-            review_max = float(self.review_max_text.Text)
-            if review_max < 0:
-                raise ValueError()
-            display_value = format_mm_value(review_max)
+            event_args.SuppressKeyPress = True
+            event_args.Handled = True
         except Exception:
-            display_value = u"—"
-        self.critical_value_label.Text = u"{0} mm+".format(display_value)
+            pass
+
+    def _handle_tolerance_leave(self, sender, event_args):
+        self._commit_tolerance_inputs(sender)
+
+    def _commit_tolerance_inputs(self, trigger_control=None):
+        if self._updating_tolerances:
+            return True
+        ok_max, review_max, message = self._get_tolerance_validation()
+        if not message:
+            self._last_valid_ok_max = ok_max
+            self._last_valid_review_max = review_max
+            self._set_tolerance_feedback(self.ok_max_text, True)
+            self._set_tolerance_feedback(self.review_max_text, True)
+            self._update_critical_value_display()
+            return True
+
+        self._updating_tolerances = True
+        try:
+            self.ok_max_text.Text = format_mm_value(
+                self._last_valid_ok_max
+            )
+            self.review_max_text.Text = format_mm_value(
+                self._last_valid_review_max
+            )
+            self._update_critical_value_display()
+        finally:
+            self._updating_tolerances = False
+
+        if trigger_control is None:
+            self._set_tolerance_feedback(self.ok_max_text, False, message)
+            self._set_tolerance_feedback(self.review_max_text, False, message)
+        else:
+            other_control = (
+                self.review_max_text
+                if trigger_control is self.ok_max_text
+                else self.ok_max_text
+            )
+            self._set_tolerance_feedback(other_control, True)
+            self._set_tolerance_feedback(trigger_control, False, message)
+        return False
+
+    def _update_critical_value_display(self):
+        display_value = format_mm_value(self._last_valid_review_max)
+        self.critical_value_text.Text = u"{0} mm+".format(display_value)
 
     def _get_tolerance_options(self):
-        warnings = []
-        defaults = self.default_tolerance_mm
-        ok_max, ok_warning = self._parse_tolerance_input(
-            self.ok_max_text.Text,
-            defaults["ok_max"],
-            u"OK Max"
-        )
-        review_max, review_warning = self._parse_tolerance_input(
-            self.review_max_text.Text,
-            defaults["review_max"],
-            u"Review Max"
-        )
-        if ok_warning:
-            warnings.append(ok_warning)
-        if review_warning:
-            warnings.append(review_warning)
-
-        if review_max <= ok_max:
-            ok_max = defaults["ok_max"]
-            review_max = defaults["review_max"]
-            warnings.append(
-                u"Review Max must be greater than OK Max. Default tolerance "
-                u"values were used."
-            )
-
+        self._commit_tolerance_inputs()
         return {
-            "ok_max": ok_max,
-            "review_max": review_max,
-            "critical_min": review_max
-        }, warnings
+            "ok_max": self._last_valid_ok_max,
+            "review_max": self._last_valid_review_max,
+            "critical_min": self._last_valid_review_max
+        }, []
 
     def _get_top_n_callouts_options(self):
         return self.top_n_callouts_value, u""
