@@ -129,11 +129,13 @@ DOC QC 또는 QC Lite를 누르면 검사 전에 Export Options가 열립니다.
 | Full CSV | 개별 Issue 전체를 보존하는 상세 데이터 |
 | Summary CSV | 반복 Issue를 그룹화한 검토 목록 |
 | Styled XLSX Report | 요약·그룹·샘플·상세 시트를 포함한 보고용 Excel 파일 |
-| Compact Summary HTML | Checked Items, Total Findings, Critical Items와 Top 5를 표시하는 요약 화면 |
-| Compact Summary PDF | HTML과 동일한 result data를 사용하는 1페이지 요약 보고서 |
+| Compact Summary HTML | Checked Sheets & Views, Total Findings, Critical Items, Top 5와 범주별 대표 Sample을 표시하는 공식 요약 화면 |
+| Compact Summary PDF | HTML·XLSX와 동일한 result data를 사용하는 A3 Landscape 1페이지 요약 보고서 |
 
 QC Lite에서는 Summary CSV, Styled XLSX, Compact Summary HTML이 기본 선택됩니다.
 Full CSV와 Compact Summary PDF는 필요할 때 선택합니다.
+QC Lite는 Sheet / View / Parameter QC를 함께 실행하며 대표 Sample은 각 범주의
+가장 높은 Severity 항목을 우선 표시합니다.
 선택한 파일은 timestamp가 포함된 이름으로 지정 폴더에 저장됩니다.
 
 ## 파일을 저장하지 않고 결과만 확인하기

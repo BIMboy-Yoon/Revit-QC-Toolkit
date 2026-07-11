@@ -31,11 +31,11 @@ def _build_group_rows(result_model):
             u"""
             <tr>
               <td class="rank">{0:02d}</td>
-              <td><span class="category-tag">{1}</span></td>
-              <td><strong>{2}</strong><span class="subline">{3}</span></td>
+              <td><span class="category-tag" title="{1}">{1}</span></td>
+              <td><strong class="cell-clamp" title="{2}">{2}</strong><span class="subline cell-clamp" title="{3}">{3}</span></td>
               <td><span class="status-pill {4}">{5}</span></td>
               <td class="count">{6}</td>
-              <td class="sample-text">{7}</td>
+              <td><span class="sample-text cell-clamp" title="{8}">{7}</span></td>
             </tr>
             """.format(
                 index,
@@ -45,7 +45,8 @@ def _build_group_rows(result_model):
                 _status_class(group["severity"]),
                 html_escape(group["severity"]),
                 group["count"],
-                html_escape(group["sample_display"])
+                html_escape(group["sample_display"]),
+                html_escape(group.get("sample_full", group["sample_display"]))
             )
         )
     if not rows:
@@ -65,9 +66,9 @@ def _build_sample_cards(result_model):
                 <span class="category-tag">{0}</span>
                 <span class="status-pill {1}">{2}</span>
               </div>
-              <h3>{3}</h3>
-              <p class="sample-meta">{4} / {5}</p>
-              <p class="sample-message">{6}</p>
+              <h3 title="{3}">{3}</h3>
+              <p class="sample-meta" title="{4} / {5}">{4} / {5}</p>
+              <p class="sample-message" title="{6}">{6}</p>
             </article>
             """.format(
                 html_escape(sample["category"]),
@@ -95,7 +96,7 @@ def build_compact_summary_html(result_model):
         kpi["checked_views"]
     )
     if kpi.get("checked_parameter_elements", 0):
-        checked_note += u" + Parameters {0}".format(
+        checked_note += u" / Parameter checks {0}".format(
             kpi["checked_parameter_elements"]
         )
 
@@ -111,9 +112,9 @@ def build_compact_summary_html(result_model):
       --green-ink:#417348; --red-soft:#f7e4e2; --red-ink:#a44f48;
       --review-ink:#a5651d; }}
     * {{ box-sizing:border-box; }}
-    html,body {{ margin:0; min-width:1600px; background:#ececea; color:var(--ink); }}
+    html,body {{ margin:0; min-width:0; background:#ececea; color:var(--ink); }}
     body {{ font-family:"Segoe UI","Malgun Gothic",Arial,sans-serif; }}
-    .canvas {{ width:1600px; min-height:980px; margin:0 auto; padding:58px 68px 46px; background:#fff; }}
+    .canvas {{ width:min(1600px,100%); min-height:980px; margin:0 auto; padding:58px 68px 46px; background:#fff; overflow:hidden; }}
     .topline {{ width:100%; height:2px; background:linear-gradient(90deg,var(--orange) 0 18%,#e8e8e6 18% 100%); }}
     header {{ display:flex; justify-content:space-between; align-items:flex-end; padding:20px 0 22px; border-bottom:1px solid var(--line); }}
     .eyebrow {{ color:var(--orange); font-size:12px; font-weight:700; letter-spacing:.18em; text-transform:uppercase; }}
@@ -122,49 +123,64 @@ def build_compact_summary_html(result_model):
     .header-meta {{ text-align:right; color:var(--muted); font-size:12px; line-height:1.7; }}
     .status-line {{ color:var(--red-ink); font-weight:700; }}
     .kpi-grid {{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:22px; }}
-    .kpi {{ position:relative; min-height:118px; padding:18px 22px; border:1px solid var(--line); background:#fff; overflow:hidden; }}
+    .kpi {{ position:relative; height:128px; min-width:0; padding:17px 22px; border:1px solid var(--line); background:#fff; overflow:hidden; display:flex; flex-direction:column; justify-content:flex-start; }}
     .kpi:before {{ content:""; position:absolute; inset:0 auto 0 0; width:5px; background:var(--tone); }}
     .kpi.checked {{ --tone:#8fbd94; background:linear-gradient(90deg,var(--green-soft),#fff 38%); }}
     .kpi.review {{ --tone:#dfa55d; background:linear-gradient(90deg,var(--orange-soft),#fff 38%); }}
     .kpi.critical {{ --tone:#d58982; background:linear-gradient(90deg,var(--red-soft),#fff 38%); }}
-    .kpi-label {{ color:var(--muted); font-size:12px; font-weight:700; letter-spacing:.11em; text-transform:uppercase; }}
-    .kpi-value {{ margin-top:6px; font-size:40px; line-height:1; font-weight:650; font-variant-numeric:tabular-nums; }}
-    .kpi-note {{ margin-top:9px; color:var(--muted); font-size:12px; }}
+    .kpi-label {{ min-height:16px; color:#666d73; font-size:clamp(10px,.82vw,12px); font-weight:700; letter-spacing:.09em; line-height:1.25; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }}
+    .kpi-value {{ margin-top:6px; font-size:clamp(30px,2.5vw,38px); line-height:1; font-weight:650; font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1; white-space:nowrap; }}
+    .kpi-note {{ margin-top:8px; color:#666d73; font-size:clamp(10px,.78vw,12px); line-height:1.25; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }}
     .middle-grid {{ display:grid; grid-template-columns:1fr 2.18fr; gap:18px; margin-top:18px; }}
     .panel {{ border:1px solid var(--line); background:#fff; }}
     .panel-head {{ display:flex; justify-content:space-between; align-items:baseline; padding:15px 18px 12px; border-bottom:1px solid var(--line); }}
     .panel-head h2 {{ margin:0; font-size:14px; letter-spacing:.055em; }}
     .panel-note {{ color:var(--muted); font-size:11px; }}
     .category-list {{ padding:6px 18px 8px; }}
-    .category-row {{ display:grid; grid-template-columns:1fr 82px; align-items:center; gap:18px; padding:15px 0; border-bottom:1px solid #eceeed; }}
+    .category-row {{ display:grid; grid-template-columns:minmax(0,1fr) minmax(58px,82px); align-items:center; gap:18px; height:55px; padding:8px 0; border-bottom:1px solid #eceeed; }}
     .category-row:last-child {{ border-bottom:0; }}
     .category-name {{ font-size:14px; font-weight:600; }}
     .category-sub {{ margin-top:4px; color:var(--muted); font-size:11px; }}
-    .category-count {{ text-align:right; color:var(--orange); font-size:28px; font-weight:650; font-variant-numeric:tabular-nums; }}
+    .category-count {{ min-width:0; text-align:right; color:var(--orange); font-size:clamp(20px,1.9vw,28px); font-weight:650; font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1; white-space:nowrap; overflow:hidden; }}
     table {{ width:100%; border-collapse:collapse; table-layout:fixed; }}
     th {{ padding:10px 9px; color:var(--muted); background:var(--panel); font-size:10px; letter-spacing:.08em; text-align:left; text-transform:uppercase; }}
-    td {{ padding:10px 9px; border-top:1px solid #eceeed; font-size:11px; vertical-align:middle; }}
-    th:nth-child(1),td:nth-child(1) {{ width:48px; }} th:nth-child(2),td:nth-child(2) {{ width:112px; }}
-    th:nth-child(3),td:nth-child(3) {{ width:168px; }} th:nth-child(4),td:nth-child(4) {{ width:78px; }}
-    th:nth-child(5),td:nth-child(5) {{ width:66px; text-align:right; }}
+    td {{ height:48px; padding:8px 9px; border-top:1px solid #eceeed; font-size:11px; line-height:1.25; vertical-align:middle; overflow:hidden; }}
+    th:nth-child(1),td:nth-child(1) {{ width:6%; }} th:nth-child(2),td:nth-child(2) {{ width:15%; }}
+    th:nth-child(3),td:nth-child(3) {{ width:23%; }} th:nth-child(4),td:nth-child(4) {{ width:13%; }}
+    th:nth-child(5),td:nth-child(5) {{ width:10%; text-align:right; }} th:nth-child(6),td:nth-child(6) {{ width:33%; }}
     .rank {{ color:#b4b8bc; font-weight:700; }} .subline {{ display:block; margin-top:2px; color:var(--muted); font-size:10px; }}
-    .count {{ color:var(--orange); font-size:17px; font-weight:700; font-variant-numeric:tabular-nums; }}
-    .sample-text {{ color:#62686e; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }}
+    .count {{ color:var(--orange); font-size:17px; font-weight:700; font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1; white-space:nowrap; }}
+    .sample-text {{ color:#62686e; }}
+    .cell-clamp {{ display:-webkit-box; min-width:0; overflow:hidden; text-overflow:ellipsis; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow-wrap:anywhere; }}
     .category-tag {{ display:inline-block; color:#646a70; font-size:10px; font-weight:700; letter-spacing:.03em; }}
-    .status-pill {{ display:inline-block; min-width:54px; padding:4px 7px; border-radius:2px; text-align:center; font-size:9px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; }}
+    .status-pill {{ display:inline-block; width:58px; padding:4px 5px; border-radius:2px; text-align:center; font-size:9px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; white-space:nowrap; }}
     .status-pill.checked {{ color:var(--green-ink); background:var(--green-soft); }}
     .status-pill.review {{ color:var(--review-ink); background:var(--orange-soft); }}
     .status-pill.critical {{ color:var(--red-ink); background:var(--red-soft); }}
     .samples-panel {{ margin-top:18px; }} .sample-grid {{ display:grid; grid-template-columns:repeat(3,1fr); gap:0; }}
-    .sample-card {{ min-height:145px; padding:16px 18px; border-right:1px solid var(--line); }}
+    .sample-card {{ height:145px; min-width:0; padding:16px 18px; border-right:1px solid var(--line); overflow:hidden; }}
     .sample-card:last-child {{ border-right:0; }} .sample-head {{ display:flex; justify-content:space-between; align-items:center; }}
     .sample-card h3 {{ margin:14px 0 4px; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }}
-    .sample-meta {{ margin:0; color:var(--muted); font-size:11px; }}
-    .sample-message {{ margin:13px 0 0; padding-top:10px; border-top:1px solid #eceeed; color:#50565b; font-size:12px; }}
+    .sample-meta {{ margin:0; color:var(--muted); font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }}
+    .sample-message {{ display:-webkit-box; margin:13px 0 0; padding-top:10px; border-top:1px solid #eceeed; color:#50565b; font-size:12px; line-height:1.35; overflow:hidden; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow-wrap:anywhere; }}
     .empty-row,.empty-card {{ color:var(--green-ink); text-align:center; }}
     footer {{ display:flex; justify-content:space-between; margin-top:18px; padding-top:12px; border-top:1px solid var(--line); color:#92979b; font-size:10px; letter-spacing:.03em; }}
     .footer-accent {{ color:var(--orange); font-weight:700; }}
-    @media print {{ html,body {{ min-width:0; background:#fff; }} .canvas {{ width:100%; min-height:0; padding:24px; }} }}
+    @page {{ size:A3 landscape; margin:8mm; }}
+    @media (max-width:1100px) {{
+      .canvas {{ padding:34px 38px 30px; }}
+      .middle-grid {{ grid-template-columns:minmax(240px,.9fr) minmax(0,2.1fr); }}
+      .panel-note {{ display:none; }}
+    }}
+    @media print {{
+      * {{ -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }}
+      html,body {{ width:100%; min-width:0; background:#fff; }}
+      .canvas {{ width:100%; min-height:0; margin:0; padding:7mm; overflow:hidden; }}
+      .kpi-grid {{ margin-top:4mm; gap:3mm; }}
+      .middle-grid,.samples-panel {{ margin-top:3mm; }}
+      header {{ padding:3mm 0 4mm; }}
+      footer {{ margin-top:3mm; }}
+    }}
   </style>
 </head>
 <body>
@@ -172,12 +188,12 @@ def build_compact_summary_html(result_model):
     <div class="topline"></div>
     <header>
       <div><div class="eyebrow">Revit QC Toolkit / Documentation Quality Control</div>
-        <h1>DOC QC COMPACT SUMMARY</h1><p class="subtitle">Sheet, View and Parameter QC result overview</p></div>
+        <h1>DOC QC COMPACT SUMMARY</h1><p class="subtitle">Quick QC Summary</p></div>
       <div class="header-meta"><div>{project}</div><div>{run_mode} / {tool_version}</div>
         <div>{generated_at}</div><div class="status-line">STATUS / {qc_status}</div></div>
     </header>
     <section class="kpi-grid">
-      <article class="kpi checked"><div class="kpi-label">Checked Items</div><div class="kpi-value">{checked_items}</div><div class="kpi-note">{checked_note}</div></article>
+      <article class="kpi checked"><div class="kpi-label">Checked Sheets &amp; Views</div><div class="kpi-value">{checked_items}</div><div class="kpi-note">{checked_note}</div></article>
       <article class="kpi review"><div class="kpi-label">Total Findings</div><div class="kpi-value">{total_findings}</div><div class="kpi-note">All findings from the current QC run</div></article>
       <article class="kpi critical"><div class="kpi-label">Critical Items</div><div class="kpi-value">{critical_items}</div><div class="kpi-note">High severity findings</div></article>
     </section>
@@ -193,7 +209,7 @@ def build_compact_summary_html(result_model):
     </section>
     <section class="panel samples-panel"><div class="panel-head"><h2>REPRESENTATIVE ITEM SAMPLES</h2><span class="panel-note">Maximum 3 findings</span></div>
       <div class="sample-grid">{sample_cards}</div></section>
-    <footer><span>Generated from the same QC result data used by HTML, PDF and XLSX reports</span><span class="footer-accent">REVIT QC TOOLKIT</span></footer>
+    <footer><span>Generated from current DOC QC result</span><span class="footer-accent">REVIT QC TOOLKIT</span></footer>
   </main>
 </body>
 </html>""".format(

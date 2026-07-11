@@ -50,9 +50,15 @@ class QcResultModelTests(unittest.TestCase):
             "Review Required",
             self.group_rows,
             self.key_rows,
-            {"project": "Portfolio", "run_mode": "QC Lite"},
+            {
+                "project": "Portfolio",
+                "run_mode": "QC Lite",
+                "checked_parameter_elements": 999,
+            },
         )
         self.assertEqual(407, model["kpi"]["checked_items"])
+        self.assertEqual(407, model["kpi"]["checked_sheets_views"])
+        self.assertEqual(999, model["kpi"]["checked_parameter_elements"])
         self.assertEqual(365, model["kpi"]["total_findings"])
         self.assertEqual(69, model["kpi"]["critical_items"])
         self.assertEqual(
@@ -76,6 +82,35 @@ class QcResultModelTests(unittest.TestCase):
         self.assertIn("+ 66 more", model["top_review_groups"][0]["sample_display"])
         self.assertNotIn("[Id:", model["top_review_groups"][0]["sample_display"])
 
+    def test_selects_one_highest_severity_sample_per_qc_category(self):
+        key_rows = [
+            ["View QC", "3D View", "Low View", "Low", "View Name", "임시 키워드"],
+            ["Sheet QC", "Sheet", "Low Sheet", "Low", "Sheet Name", "누락"],
+            ["Parameter QC", "Rooms", "Low Room", "Low", "RoomType", "값 비어 있음"],
+            ["Sheet QC", "Sheet", "High Sheet", "High", "Sheet Number", "누락"],
+            ["View QC", "Floor Plan", "High View", "High", "View Template", "미적용"],
+            ["Parameter QC", "Rooms", "High Room", "High", "RoomType", "Shared Parameter 없음"],
+        ]
+        model = build_qc_result_model(
+            self.summary_data,
+            "Review Required",
+            self.group_rows,
+            key_rows,
+            {},
+        )
+        self.assertEqual(
+            ["Sheet QC", "View QC", "Parameter QC"],
+            [item["category"] for item in model["representative_items"]],
+        )
+        self.assertEqual(
+            ["High", "High", "High"],
+            [item["severity"] for item in model["representative_items"]],
+        )
+        self.assertEqual(
+            ["High Sheet", "High View", "High Room"],
+            [item["item_name"] for item in model["representative_items"]],
+        )
+
     def test_official_html_uses_only_model_values(self):
         model = build_qc_result_model(
             self.summary_data,
@@ -85,7 +120,7 @@ class QcResultModelTests(unittest.TestCase):
             {"project": "Portfolio", "run_mode": "QC Lite", "tool_version": "v2.9"},
         )
         html = build_compact_summary_html(model)
-        self.assertIn("Checked Items", html)
+        self.assertIn("Checked Sheets &amp; Views", html)
         self.assertIn("Total Findings", html)
         self.assertIn(">407<", html)
         self.assertIn(">365<", html)
@@ -93,6 +128,11 @@ class QcResultModelTests(unittest.TestCase):
         self.assertNotIn("PORTFOLIO CAPTURE / DEVELOPMENT ONLY", html)
         self.assertNotIn("DEV / PORTFOLIO_CAPTURE", html)
         self.assertNotIn("[Id:", html)
+        self.assertIn('title="C-15, C-16, C-17"', html)
+        self.assertIn("Quick QC Summary", html)
+        self.assertIn("Generated from current DOC QC result", html)
+        self.assertIn("@page { size:A3 landscape", html)
+        self.assertIn("font-variant-numeric:tabular-nums", html)
 
 
 if __name__ == "__main__":

@@ -75,9 +75,9 @@ HELP_SECTIONS = [
         u"QC Lite",
         u"Sheet와 View의 주요 Issue를 빠르게 확인하는 프로젝트 상태 Dashboard입니다.",
         [
-            (u"Dashboard", u"Sheet / View Issue Count, Severity Count와 Top Issues를 카드형으로 표시합니다."),
+            (u"Dashboard", u"Sheet / View / Parameter Issue Count, Severity Count와 Top Issues를 카드형으로 표시합니다."),
             (u"다음 작업", u"Parameter까지 검토하려면 DOC QC를 실행하고, 저장된 결과는 Report로 엽니다."),
-            (u"주의사항", u"QC Lite의 Parameter QC와 Scan QC 카드는 상태 안내용이며 N/A로 표시됩니다.")
+            (u"주의사항", u"QC Lite는 Sheet / View / Parameter QC를 요약하며, Scan QC 카드는 별도 실행 안내용입니다.")
         ]
     ),
     (

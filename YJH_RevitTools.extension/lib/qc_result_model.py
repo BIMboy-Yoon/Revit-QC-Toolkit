@@ -12,6 +12,11 @@ except NameError:
 
 
 SEVERITY_RANK = {u"High": 3, u"Medium": 2, u"Low": 1}
+REPRESENTATIVE_CATEGORY_ORDER = (
+    u"Sheet QC",
+    u"View QC",
+    u"Parameter QC"
+)
 
 
 def to_text(value):
@@ -43,7 +48,8 @@ def _build_group(group_row, sample_limit):
     count = to_int(group_row[4])
     displayed_count = min(count, sample_limit)
     remaining_count = max(0, count - displayed_count)
-    sample_display = sanitize_display_text(group_row[5])
+    sample_full = sanitize_display_text(group_row[5])
+    sample_display = sample_full
     if remaining_count > 0:
         sample_display = u"{0} + {1} more".format(
             sample_display,
@@ -56,6 +62,7 @@ def _build_group(group_row, sample_limit):
         "severity": to_text(group_row[3]),
         "count": count,
         "sample_display": sample_display,
+        "sample_full": sample_full,
         "remaining_count": remaining_count
     }
 
@@ -69,6 +76,51 @@ def _build_representative_item(key_row):
         "qc_item": to_text(key_row[4]),
         "message": to_text(key_row[5])
     }
+
+
+def _select_representative_items(key_issue_rows, representative_limit):
+    candidates = []
+    for source_index, key_row in enumerate(key_issue_rows):
+        item = _build_representative_item(key_row)
+        candidates.append((source_index, item))
+
+    selected = []
+    selected_indexes = set()
+    for category in REPRESENTATIVE_CATEGORY_ORDER:
+        category_candidates = [
+            candidate for candidate in candidates
+            if candidate[1]["category"] == category
+        ]
+        category_candidates = sorted(
+            category_candidates,
+            key=lambda candidate: (
+                -SEVERITY_RANK.get(candidate[1]["severity"], 0),
+                candidate[0]
+            )
+        )
+        if category_candidates:
+            selected_index, selected_item = category_candidates[0]
+            selected.append(selected_item)
+            selected_indexes.add(selected_index)
+
+    if len(selected) < representative_limit:
+        remaining_candidates = sorted(
+            [
+                candidate for candidate in candidates
+                if candidate[0] not in selected_indexes
+            ],
+            key=lambda candidate: (
+                -SEVERITY_RANK.get(candidate[1]["severity"], 0),
+                candidate[0]
+            )
+        )
+        for source_index, item in remaining_candidates:
+            if len(selected) >= representative_limit:
+                break
+            selected.append(item)
+            selected_indexes.add(source_index)
+
+    return selected[:representative_limit]
 
 
 def validate_result_model(result_model):
@@ -95,6 +147,8 @@ def validate_result_model(result_model):
         )
     if kpi["critical_items"] != severity_counts["high"]:
         raise ValueError(u"Critical Items must equal High severity count.")
+    if kpi["critical_items"] > total_findings:
+        raise ValueError(u"Critical Items must be a subset of Total Findings.")
     return True
 
 
@@ -129,21 +183,19 @@ def build_qc_result_model(
             item["qc_item"]
         )
     )
-    representative_items = [
-        _build_representative_item(row)
-        for row in key_issue_rows[:representative_limit]
-    ]
+    representative_items = _select_representative_items(
+        key_issue_rows,
+        representative_limit
+    )
+    checked_sheets_views = checked_sheets + checked_views
 
     result_model = {
         "schema_version": "1.0",
         "metadata": dict(metadata or {}),
         "qc_status": to_text(qc_status),
         "kpi": {
-            "checked_items": (
-                checked_sheets
-                + checked_views
-                + checked_parameter_elements
-            ),
+            "checked_items": checked_sheets_views,
+            "checked_sheets_views": checked_sheets_views,
             "checked_sheets": checked_sheets,
             "checked_views": checked_views,
             "checked_parameter_elements": checked_parameter_elements,

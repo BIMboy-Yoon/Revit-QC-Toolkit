@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Quick read-only QC: Sheet + View only. No Transaction.
+# Quick read-only QC summary: Sheet + View + Parameter. No Transaction.
 
 import os
 import sys
@@ -25,9 +25,16 @@ if LIB_DIR not in sys.path:
     sys.path.insert(0, LIB_DIR)
 
 
+from checks_parameter import run_parameter_checks
 from checks_sheet import run_sheet_checks
 from checks_view import run_view_checks
-from collectors import collect_placed_view_ids, collect_sheets, collect_views, to_text
+from collectors import (
+    collect_parameter_elements,
+    collect_placed_view_ids,
+    collect_sheets,
+    collect_views,
+    to_text
+)
 from config_loader import load_config
 from export_options import request_export_options
 from compact_summary import save_compact_summary_html
@@ -40,6 +47,7 @@ from exporters import (
 from grouping import (
     build_issue_group_rows,
     build_key_issue_rows,
+    build_representative_issue_rows,
     build_summary_data,
     get_qc_status
 )
@@ -80,18 +88,28 @@ if CONFIG_META.get("warning", u""):
 
 run_time = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
 view_config = config["view_qc"]
+parameter_config = config["parameter_qc"]
 sheets = collect_sheets(doc)
 placed_view_ids = collect_placed_view_ids(sheets)
 checked_views = collect_views(doc, view_config["supported_view_types"])
+parameter_collections = collect_parameter_elements(
+    doc,
+    parameter_config["rules"]
+)
 
 issue_rows = []
 run_sheet_checks(sheets, issue_rows, config["sheet_qc"])
 run_view_checks(checked_views, placed_view_ids, issue_rows, view_config)
+checked_parameter_elements = run_parameter_checks(
+    doc,
+    parameter_collections,
+    issue_rows
+)
 
 issue_group_rows = build_issue_group_rows(issue_rows)
 compact_issue_group_rows = build_issue_group_rows(
     issue_rows,
-    shorten_samples=True,
+    shorten_samples=False,
     sample_max_length=config["display"]["group_sample_max_length"],
     sample_limit=3
 )
@@ -100,6 +118,13 @@ key_issue_rows = build_key_issue_rows(
     view_config["temporary_keywords"],
     key_issue_limit=3,
     item_max_length=config["display"]["key_item_max_length"]
+)
+representative_issue_rows = build_representative_issue_rows(
+    issue_rows,
+    item_max_length=max(
+        80,
+        config["display"]["key_item_max_length"]
+    )
 )
 summary_data = build_summary_data(issue_rows, len(sheets), len(checked_views))
 qc_status = get_qc_status(summary_data)
@@ -111,7 +136,7 @@ report_context = {
     "active_config_display": ACTIVE_CONFIG_DISPLAY,
     "active_preset": ACTIVE_PRESET_NAME,
     "run_mode": u"QC Lite",
-    "checked_parameter_elements": 0,
+    "checked_parameter_elements": checked_parameter_elements,
     "review_group_count": len(issue_group_rows),
     "run_time": run_time,
     "export_time": export_time,
@@ -130,7 +155,7 @@ result_model = build_qc_result_model(
     summary_data,
     qc_status,
     compact_issue_group_rows,
-    key_issue_rows,
+    representative_issue_rows,
     {
         "project": report_context["project"],
         "run_mode": report_context["run_mode"],
@@ -138,10 +163,21 @@ result_model = build_qc_result_model(
         "active_config": ACTIVE_CONFIG_DISPLAY,
         "run_time": run_time,
         "export_time": export_time,
-        "checked_parameter_elements": 0
+        "checked_parameter_elements": checked_parameter_elements
     }
 )
 report_context["result_model"] = result_model
+report_context["key_issue_rows"] = [
+    [
+        item["category"],
+        item["item_type"],
+        item["item_name"],
+        item["severity"],
+        item["qc_item"],
+        item["message"]
+    ]
+    for item in result_model["representative_items"]
+]
 saved_full_csv_path = u""
 saved_summary_csv_path = u""
 saved_styled_xlsx_path = u""

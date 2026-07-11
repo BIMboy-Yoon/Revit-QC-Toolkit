@@ -7,7 +7,7 @@ import os
 import sys
 
 from reportlab.lib.colors import Color, HexColor
-from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.pagesizes import A3, A4, landscape
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
@@ -173,9 +173,15 @@ def draw_sample_cards(pdf, x, y, width, height, model, body_font, bold_font):
 
 def create_pdf(result_model, output_pdf_path):
     body_font, bold_font = register_fonts()
-    page_width, page_height = landscape(A4)
+    page_width, page_height = landscape(A3)
+    layout_width, layout_height = landscape(A4)
+    layout_scale = page_width / layout_width
     pdf = canvas.Canvas(output_pdf_path, pagesize=(page_width, page_height))
     pdf.setTitle("DOC QC Compact Summary")
+    pdf.saveState()
+    pdf.scale(layout_scale, layout_scale)
+    page_width = layout_width
+    page_height = layout_height
 
     margin = 34
     content_width = page_width - (margin * 2)
@@ -189,7 +195,7 @@ def create_pdf(result_model, output_pdf_path):
     pdf.drawString(margin, page_height - 55, "REVIT QC TOOLKIT / DOCUMENTATION QUALITY CONTROL")
     set_text(pdf, bold_font, 19, INK)
     pdf.drawString(margin, page_height - 78, "DOC QC COMPACT SUMMARY")
-    draw_label(pdf, margin, page_height - 91, "Sheet, View and Parameter QC result overview", body_font, 7)
+    draw_label(pdf, margin, page_height - 91, "Quick QC Summary", body_font, 7)
     set_text(pdf, body_font, 6.5, MUTED)
     pdf.drawRightString(page_width - margin, page_height - 58, shorten(metadata.get("project", ""), 52))
     pdf.drawRightString(page_width - margin, page_height - 70, "{0} / {1}".format(metadata.get("run_mode", "QC"), metadata.get("tool_version", "")))
@@ -202,7 +208,11 @@ def create_pdf(result_model, output_pdf_path):
     card_width = (content_width - (card_gap * 2)) / 3.0
     card_y = page_height - 175
     checked_note = "Sheets {0} + Views {1}".format(kpi["checked_sheets"], kpi["checked_views"])
-    draw_kpi_card(pdf, margin, card_y, card_width, 64, "Checked Items", kpi["checked_items"], checked_note, GREEN_SOFT, GREEN_INK, body_font, bold_font)
+    if kpi.get("checked_parameter_elements", 0):
+        checked_note += " / Parameter checks {0}".format(
+            kpi["checked_parameter_elements"]
+        )
+    draw_kpi_card(pdf, margin, card_y, card_width, 64, "Checked Sheets & Views", kpi["checked_items"], checked_note, GREEN_SOFT, GREEN_INK, body_font, bold_font)
     draw_kpi_card(pdf, margin + card_width + card_gap, card_y, card_width, 64, "Total Findings", kpi["total_findings"], "All findings from the current QC run", ORANGE_SOFT, ORANGE, body_font, bold_font)
     draw_kpi_card(pdf, margin + ((card_width + card_gap) * 2), card_y, card_width, 64, "Critical Items", kpi["critical_items"], "High severity findings", RED_SOFT, RED_INK, body_font, bold_font)
 
@@ -211,13 +221,14 @@ def create_pdf(result_model, output_pdf_path):
     draw_category_panel(pdf, margin, middle_y, left_width, 154, result_model, body_font, bold_font)
     draw_groups_panel(pdf, margin + left_width + 10, middle_y, content_width - left_width - 10, 154, result_model, body_font, bold_font)
 
-    draw_sample_cards(pdf, margin, 58, content_width, 140, result_model, body_font, bold_font)
+    draw_sample_cards(pdf, margin, 62, content_width, 170, result_model, body_font, bold_font)
     pdf.setStrokeColor(LINE)
     pdf.line(margin, 44, page_width - margin, 44)
-    draw_label(pdf, margin, 31, "Generated from the same QC result data used by HTML, PDF and XLSX reports", body_font, 6)
+    draw_label(pdf, margin, 31, "Generated from current DOC QC result", body_font, 6)
     set_text(pdf, bold_font, 6, ORANGE)
     pdf.drawRightString(page_width - margin, 31, "REVIT QC TOOLKIT")
 
+    pdf.restoreState()
     pdf.showPage()
     pdf.save()
     return output_pdf_path

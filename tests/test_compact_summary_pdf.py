@@ -23,12 +23,14 @@ class CompactSummaryPdfTests(unittest.TestCase):
         model = {
             "metadata": {"project": "Portfolio", "run_mode": "QC Lite", "tool_version": "v2.9", "export_time": "2026-07-11 10:00:00"},
             "qc_status": "Review Required",
-            "kpi": {"checked_items": 407, "checked_sheets": 105, "checked_views": 302, "total_findings": 365, "critical_items": 69},
+            "kpi": {"checked_items": 407, "checked_sheets": 105, "checked_views": 302, "checked_parameter_elements": 1234, "total_findings": 365, "critical_items": 69},
             "issue_count_by_qc": {"sheet_qc": 4, "view_qc": 46, "parameter_qc": 315},
             "top_review_groups": [
                 {"category": "Parameter QC", "item_type": "Rooms", "qc_item": "RoomType", "severity": "High", "count": 69, "sample_display": "C-15, C-16, C-17 + 66 more"}
             ],
             "representative_items": [
+                {"category": "Sheet QC", "item_type": "Sheet", "item_name": "매우 긴 시트 이름 " * 8, "severity": "High", "qc_item": "Placed Views", "message": "배치된 View 없음"},
+                {"category": "View QC", "item_type": "Floor Plan", "item_name": "LONG VIEW NAME " * 12, "severity": "Medium", "qc_item": "View Template", "message": "View Template 미적용"},
                 {"category": "Parameter QC", "item_type": "Rooms", "item_name": "C-15", "severity": "High", "qc_item": "RoomType", "message": "Shared Parameter 없음"}
             ],
         }
@@ -39,6 +41,9 @@ class CompactSummaryPdfTests(unittest.TestCase):
             self.assertGreater(os.path.getsize(output_path), 5000)
             reader = PdfReader(output_path)
             self.assertEqual(1, len(reader.pages))
+            page = reader.pages[0]
+            self.assertGreater(float(page.mediabox.width), 1100)
+            self.assertGreater(float(page.mediabox.height), 800)
 
 
 if __name__ == "__main__":

@@ -613,7 +613,11 @@ class QcLiteDashboardForm(QcFormBase):
             "VIEW QC", summary_data.get("view_issues", 0),
             u"{0} views".format(summary_data.get("checked_views", 0))
         ), 1, 0)
-        cards.Controls.Add(self._card("PARAMETER QC", u"N/A", "DOC QC에서 검토"), 2, 0)
+        cards.Controls.Add(self._card(
+            "PARAMETER QC",
+            summary_data.get("parameter_issues", 0),
+            "Quick QC에 포함"
+        ), 2, 0)
         cards.Controls.Add(self._card("SCAN QC", u"N/A", "Scan QC에서 검토"), 3, 0)
 
         counts = Label()

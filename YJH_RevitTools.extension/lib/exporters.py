@@ -377,7 +377,7 @@ def write_xlsx_summary_sheet(
         (u"Run Mode", report_context.get("run_mode", u"")),
         (u"QC Status", qc_status),
         (
-            u"Checked Items",
+            u"Checked Sheets & Views",
             kpi.get(
                 "checked_items",
                 summary_data["checked_sheets"] + summary_data["checked_views"]

@@ -44,6 +44,7 @@ class StyledXlsxSummaryTests(unittest.TestCase):
         self.assertEqual("SUMMARY", workbook.sheetnames[0])
         self.assertIn("Full Detail", workbook.sheetnames)
         values = [cell.value for row in workbook["SUMMARY"].iter_rows() for cell in row]
+        self.assertIn("Checked Sheets & Views", values)
         self.assertIn(407, values)
         self.assertIn(365, values)
         self.assertIn(69, values)

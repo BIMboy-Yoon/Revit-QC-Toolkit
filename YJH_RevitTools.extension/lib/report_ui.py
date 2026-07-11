@@ -176,12 +176,13 @@ def render_quick_report(
     compact_pdf_error,
     export_options
 ):
-    """Sheet + View QC Lite용 간결한 Summary를 출력한다."""
+    """Sheet + View + Parameter QC Lite Summary를 출력한다."""
     apply_portfolio_output_style(output)
 
     compact_summary_rows = [
         [u"Checked Sheets", summary_data["checked_sheets"]],
         [u"Checked Views", summary_data["checked_views"]],
+        [u"Parameter QC Findings", summary_data["parameter_issues"]],
         [u"Total Review Items", summary_data["total_issues"]],
         [u"Issue Groups", issue_group_count],
         [u"QC Status", qc_status],
@@ -212,8 +213,8 @@ def render_quick_report(
                 <div style="display:inline-block; vertical-align:top; width:21%;
                     margin-right:8px; padding:12px; background:#F4F6F8;
                     border:1px solid #D6DDE3;">
-                    <b>PARAMETER QC</b><br><span style="font-size:24px;">N/A</span><br>
-                    <span style="color:#5F6F7D;">Run DOC QC</span>
+                    <b>PARAMETER QC</b><br><span style="font-size:24px;">{5}</span><br>
+                    <span style="color:#5F6F7D;">Included in Quick QC</span>
                 </div>
                 <div style="display:inline-block; vertical-align:top; width:21%;
                     padding:12px; background:#F4F6F8;
@@ -224,7 +225,7 @@ def render_quick_report(
             </div>
             <div style="padding:10px 12px; background:#FFF1E6;
                 border:1px solid #E8C8B0; margin-bottom:12px;">
-                <b>ISSUE COUNT: {5}</b> &nbsp; | &nbsp; STATUS: {6}
+                <b>ISSUE COUNT: {6}</b> &nbsp; | &nbsp; STATUS: {7}
             </div>
         </div>
         """.format(
@@ -233,6 +234,7 @@ def render_quick_report(
             summary_data["checked_sheets"],
             summary_data["view_issues"],
             summary_data["checked_views"],
+            summary_data["parameter_issues"],
             summary_data["total_issues"],
             html_escape(qc_status)
         )

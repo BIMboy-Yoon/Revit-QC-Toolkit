@@ -219,6 +219,27 @@ def build_key_issue_rows(
     return key_issue_rows
 
 
+def build_representative_issue_rows(
+    issue_rows,
+    item_max_length=80
+):
+    """Build display candidates without category-priority filtering."""
+    representative_rows = []
+    for row in issue_rows:
+        qc_item, issue_message = get_issue_group_fields(row)
+        representative_rows.append(
+            [
+                row[0],
+                row[1],
+                truncate_display_text(row[2], item_max_length),
+                row[3],
+                qc_item,
+                issue_message
+            ]
+        )
+    return representative_rows
+
+
 def build_summary_data(issue_rows, checked_sheet_count, checked_view_count):
     summary_data = {
         "checked_sheets": checked_sheet_count,

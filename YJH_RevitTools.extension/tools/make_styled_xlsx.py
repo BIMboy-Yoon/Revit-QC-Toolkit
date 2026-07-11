@@ -393,7 +393,7 @@ def write_summary_sheet(sheet, payload, styles):
     sheet.row_dimensions[4].height = 2
 
     kpi_items = [
-        ("Checked Items", kpi.get("checked_items", summary_data.get("checked_sheets", 0) + summary_data.get("checked_views", 0)), 1, 2, False),
+        ("Checked Sheets & Views", kpi.get("checked_items", summary_data.get("checked_sheets", 0) + summary_data.get("checked_views", 0)), 1, 2, False),
         ("Total Findings", kpi.get("total_findings", summary_data.get("total_issues", 0)), 3, 4, True),
         ("Critical Items", kpi.get("critical_items", summary_data.get("high_count", 0)), 5, 6, True),
         ("Review Groups", result_model.get("review_group_count", metadata.get("review_group_count", 0)), 7, 8, False)

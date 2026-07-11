@@ -95,7 +95,7 @@ Git에서 제외합니다.
 | Button | Role | Export |
 | --- | --- | --- |
 | DOC QC | Sheet + View + Parameter QC, Compact Summary, Review Group Summary | Full CSV + Summary CSV |
-| QC Lite | Sheet + View QC, 빠른 Compact Summary | Summary CSV |
+| QC Lite | Sheet + View + Parameter QC, 공식 Compact Summary | Summary CSV + Styled XLSX + Compact HTML/PDF |
 | QC Settings | 공통 JSON 설정 경로 표시 및 기본 편집기로 열기 | 없음 |
 | Report | 마지막 Summary CSV 또는 HTML Report 열기 | 없음 |
 | Help | 버튼별 사용법과 read-only 방식 안내 | 없음 |
